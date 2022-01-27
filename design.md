@@ -1,6 +1,105 @@
+# Goals
+
+## Core Reason for Being
+
+CRADLE is a service for managing the execution of resource-intensive
+calculations and the caching of their results. It attempts to bring a
+declarative approach to scientific computing, where instead of directly
+executing calculations, clients *declare* their interest in specific
+calculation results and let CRADLE figure out what actually needs to be done
+(if anything) to deliver those results.
+
+Calculations are specified as compositions of pure functions applied to
+immutable inputs (which may simply be raw data or may themselves be calculation
+results).
+
+CRADLE seeks to enable this approach in as many environments as possible, but
+in a way that's compatible across environments. (For example, when deployed
+internally within a C++ application, it may enable calculation compositions to
+be specified as highly-efficient native data structures using function
+pointers, but it may also allow these same compositions to be exported to JSON
+data structures for manipulation in Python.)
+
+## Supportive Goals
+
+In order to achieve its primary goal in a useful manner, CRADLE should:
+
+- Impose an acceptably small performance overhead on the user. (What
+  constitutes "acceptably small" may differ depending on the environment.)
+
+- Provide integrations with popular tools/services for storing data, performing
+  calculations, and deploying applications/code.
+
+- Provide integrations with popular development tools in targeted environments.
+  (e.g., For Python, not only should it provide an SDK for Python itself, but
+  ideally also integrations with NumPy, Jupyter, etc.)
+
+- Provide supporting tools for analyzing calculation compositions, tracking
+  progress, analyzing logs, debugging problematic calculations, etc.
+
+# Immediate MGH Use Cases
+
+## Astroid Support Apps
+
+These would be C++ desktop apps that allow users to perform various support
+functions for Astroid (via Thinknode). e.g.:
+- copy/move imported data between realms
+- copy patient plans between realms
+- deploy realm configurations
+- perform robust analyses (extra dose calculations)
+
+(Those functions are currently performed via Python scripts, but those are hard
+to set up and run, which limits the number of users who are able to run them.)
+
+## Plan Evaluation App (PEA)
+
+This would be a C++ desktop app that is much more graphically-intensive and
+involves visualizing patient images and dose distributions. The purpose would
+be to perform more in-depth evaluations and comparisons on Astroid treatment
+plans. (Do custom calculations on the plans and visualize the results.)
+
+# The Calculation Resolution Process
+
+The essence of CRADLE is all about quickly resolving calculation requests that
+include:
+
+- a function
+- some inputs (which are other requests)
+
+This is somewhat abstract and could have different manifestations in different
+environments. For example, for a C++ app that only uses CRADLE internally, the
+function could be represented simply by a function pointer. In a more
+heavy-weight deployment, the function could be represented by a Docker image
+tag.
+
+Regardless of the exact environment and manifestation, the resolution process
+follows a similar pattern:
+
+- Try resolving it using a cache lookup.
+  - The cache lookup is keyed by the content of the request itself. (This
+    could involve a hash, either entirely as a replacement or just to speed
+    up the lookup. - In the Astroid C++ code, 32-bit hashes are precomputed
+    as the requests are constructed.)
+  - This can be skipped entirely or partially for functions where it's not
+    warranted. (In Astroid, the default is to use the memory cache but not
+    the disk cached. Functions can be explicitly marked for disk caching or
+    marked as 'trivial' to disable caching entirely.)
+
+- Resolve the inputs to values.
+
+- Try resolving it again using the cache but with the actual values substituted
+  into the inputs.
+  - This allows you to reuse results in cases where the inputs have changed in
+    structure but still produce the same value. (Originally Thinknode didn't do
+    this, but it proved frustrating in certain cases where it felt like the
+    calculation was obviously the same. It's possible that these cases are
+    uncommon enough that this could be conditionally enabled/disabled.)
+
+- Invoke the function.
+
 # Service Architecture
 
-## Overview
+## Components
 
 core
   - asynchronous execution logic (using cppcoro & thread pools)
@@ -40,7 +139,7 @@ external client APIs
   - WebSockets
   - REST [maybe] [someday]
 
-## Notes
+### Notes
 
 - Components labeled as "[built-in]" would automatically be provided by the
   core.
@@ -219,7 +318,28 @@ security (just a reasonable guarantee that collisions won't happen).
 
 ## Contexts
 
-TODO
+In Thinknode, almost all operations happen within a 'context'. The context is
+an immutable entity that defines the environment in which an operation happens.
+In particular, it provides:
+
+- the versions of the (calculation) apps that are installed in the environment
+- the data bucket where data is read from (and written to)
+
+In generalizing this, it seems that there are two concerns:
+
+1. Since we are using a more generalized/extensible design, essentially all
+   aspects of the CRADLE environment must now be explicitly provided, so some
+   sort of context must exist to say where data can be found, where calculation
+   app images come from, etc.
+
+2. The context (in Thinknode, at least) allows client requests to refer to
+   functions in calculation apps using only the *name* of that app (without
+   specifying exactly which version of the app to use or where that app can be
+   found). This allows clients to have one central location where they specify
+   which versions of apps they depend on. (Essentially, one can think of
+   requests as first existing in some unresolved/dependent state (where app
+   references are just names) and then being combined with a context to become
+   fully resolved/independent.)
 
 ## App Manifests
 
@@ -229,9 +349,22 @@ TODO
 
 ## Encryption
 
-TODO
+CRADLE needs to be compatible with storing sensitive data that needs to be
+encrypted both in transit and at rest). (This matters for HIPAA.)
 
-(This matters for HIPAA.)
+Obviously, since CRADLE is agnostic to the format of the data it processes, one
+could achieve encryption simply by encrypting/decrypting data whenever it
+enters/exits CRADLE. This wouldn't require any explicit support from CRADLE.
+However, it might result in a) additional complexity on all the boundaries
+where clients/apps interact with CRADLE, b) unnecessary work encrypting and
+decrypting along boundaries that don't require it (e.g., the memory cache), and
+c) decreased usefulness of analysis tools (since data would become more
+opaque).
+
+Thus, CRADLE should provide explicit support by allowing data to be denoted as
+sensitive. It should even allow this to be the default and require clients to
+opt-out for specific data types. (Unclear right now what would be the scope of
+this default setting.)
 
 ## Key Management
 
@@ -241,3 +374,51 @@ managed by CRADLE.)
 ## Composition Caches
 
 TODO
+
+## The Role of the Preprocessor
+
+Astroid uses a preprocessor for generating boilerplate C++ code needed to:
+1. Implement certain 'normal' C++ operations that aren't provided by default
+   when declaring a data structure (e.g., comparison operators).
+2. Serialize data structures for network and disk I/O.
+3. Expose C++ functions for external invocation.
+4. Generate external descriptions of C++ types and functions (for registration
+   with Thinknode and as documentation).
+
+A lot (or all?) or #1 has been made obsolete by improvements in C++.
+
+#2 still has no good solution in C++ without external tools.
+
+#3 is more approachable in C++ but not quite trivial.
+
+#4 is also not trivial but might be approachable with the help of something
+like Doxygen (or some Clang-based tool).
+
+From the perspective of a C++ developer wanting to use CRADLE, it would be
+*highly* undesirable (often a deal-breaker) for CRADLE to try to impose the use
+of an external preprocessor. It would be a bit more palatable to require the
+use of an external tool that analyzed source code and extracted information for
+use in a manifest/documentation (but didn't actually try to generate C++ code
+itself). (And this would be even more acceptable if such a tool was only
+required when using CRADLE in an environment that already implied that external
+services were running.)
+
+Ideally, from a C++ development perspective, CRADLE should:
+
+- Define the requirements that it imposes on types and functions in order for
+  them to be exposed through CRADLE.
+    - Note that these requirements might differ depending on the environment.
+      (Exposing a function to other C++ code requires a lot less than exposing
+      it to Python code.)
+    - Requirements within C++ itself should be expressed as C++20 concepts.
+
+- Be flexible about how those requirements are fulfilled.
+    - Where appropriate, provide tools that we think make the job easier, but
+      also allow developers to fulfill the requirements in other ways that make
+      more sense to them.
+
+The preprocessor is likely still a useful tool for fulfilling some of the above
+requirements in the core CRADLE code. It *might* also still be useful to
+provide as an option for C++ developers who want to use CRADLE, but it
+definitely shouldn't be required, and it's worth considering alternative ways
+to do the same job.
