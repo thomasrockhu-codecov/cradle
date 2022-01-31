@@ -429,7 +429,7 @@ look_up(disk_cache_impl const& cache, string const& key, bool only_if_valid)
             id = read_int64(row, 0);
             valid = read_bool(row, 1);
             in_db = has_value(row, 2) && read_bool(row, 2);
-            value = has_value(row, 3) ? some(read_string(row, 3)) : none;
+            value = has_value(row, 3) ? some(read_blob(row, 3)) : none;
             size = has_value(row, 4) ? read_int64(row, 4) : 0;
             original_size = has_value(row, 5) ? read_int64(row, 5) : 0;
             crc32 = has_value(row, 6) ? read_int32(row, 6) : 0;
