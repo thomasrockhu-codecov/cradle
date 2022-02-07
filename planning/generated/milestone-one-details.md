@@ -19,45 +19,12 @@ See Tom's document `cppapi.md`.
 
 The current design has a `service` directory offering caching and HTTP requests:
 
-```plantuml
-@startuml
-component "Rest of CRADLE" as cradle
-
-package "Service" {
-    [caching]
-    [HTTP]
-}
-
-cradle -down-> HTTP
-cradle -down-> caching
-@enduml
-```
+![](8a22676e4d1582de9dd8ae31a2099ad205ab3365.svg)
 
 The idea is to factor out the caching functionality into a separate package, with an
 interface that other users can access:
 
-```plantuml
-@startuml
-component "Rest of CRADLE" as cradle
-
-component "Client X" as clientx
-
-component "HTTP"
-
-package "Inner CRADLE" as inner {
-    interface "caching API" as api
-    [caching]
-}
-
-component "glue"
-
-cradle -down-> HTTP
-cradle -down-> glue
-clientx -down-> api
-glue -down-> api
-api -down-> caching
-@enduml
-```
+![](ec16635eb31225a47ee500a548979b692efbde63.svg)
 
 To do:
 * Collect code in one location (currently in `caching/`, `core/id.*`, most of `service/`)
