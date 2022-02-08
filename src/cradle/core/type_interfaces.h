@@ -302,7 +302,7 @@ deep_sizeof(blob const& b)
 {
     // This ignores the size of the ownership holder, but that's not a big
     // deal.
-    return sizeof(blob) + b.size;
+    return sizeof(blob) + b.size();
 }
 
 struct dynamic;

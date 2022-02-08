@@ -33,13 +33,6 @@ typedef int64_t integer;
 
 typedef std::vector<boost::uint8_t> byte_vector;
 
-// ownership_holder is meant to express polymorphic ownership of a resource.
-// The idea is that the resource may be owned in many different ways, and we
-// don't care what way. We only want an object that will provide ownership of
-// the resource until it's destructed. We can achieve this by using an any
-// object to hold the ownership object.
-typedef std::any ownership_holder;
-
 // nil_t is a unit type. It has only one possible value, :nil.
 struct nil_t
 {
@@ -48,9 +41,31 @@ static nil_t nil;
 
 struct blob
 {
-    ownership_holder ownership;
-    char const* data = nullptr;
-    std::size_t size = 0;
+    blob() : size_(0)
+    {
+    }
+
+    // TODO: Maybe change this from char to std::byte instead?
+    blob(std::shared_ptr<char const> data, std::size_t size)
+        : data_(std::move(data)), size_(size)
+    {
+    }
+
+    char const*
+    data() const
+    {
+        return data_.get();
+    }
+
+    std::size_t
+    size() const
+    {
+        return size_;
+    }
+
+ private:
+    std::shared_ptr<char const> data_;
+    std::size_t size_;
 };
 
 // type_info_query<T>::get(&info) should set :info to the CRADLE type info for
@@ -126,7 +141,7 @@ using dynamic_storage = std::variant<
     integer,
     double,
     string,
-    std::shared_ptr<blob>,
+    blob,
     boost::posix_time::ptime,
     dynamic_array,
     dynamic_map>;
@@ -281,12 +296,12 @@ struct dynamic
     void
     set(blob const& v)
     {
-        storage_ = std::make_shared<blob>(v);
+        storage_ = v;
     }
     void
     set(blob&& v)
     {
-        storage_ = std::make_shared<blob>(std::move(v));
+        storage_ = std::move(v);
     }
     void
     set(boost::posix_time::ptime const& v)

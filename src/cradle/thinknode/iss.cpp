@@ -508,7 +508,9 @@ post_iss_object(
 {
     std::string data_hash;
     picosha2::hash256_hex_string(
-        msgpack_data.data, msgpack_data.data + msgpack_data.size, data_hash);
+        msgpack_data.data(),
+        msgpack_data.data() + msgpack_data.size(),
+        data_hash);
 
     auto cache_key = make_sha256_hashed_id(
         "post_iss_object",

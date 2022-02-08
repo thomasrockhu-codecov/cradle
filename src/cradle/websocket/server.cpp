@@ -209,8 +209,8 @@ encode_object(output_data_encoding encoding, blob const& msgpack_data)
         return msgpack_data;
 
     auto object = parse_msgpack_value(
-        reinterpret_cast<uint8_t const*>(msgpack_data.data),
-        msgpack_data.size);
+        reinterpret_cast<uint8_t const*>(msgpack_data.data()),
+        msgpack_data.size());
     switch (encoding)
     {
         case output_data_encoding::JSON:
@@ -354,18 +354,18 @@ coerce_encoded_object(
     {
         case input_data_encoding::JSON:
             decoded_object = parse_json_value(
-                reinterpret_cast<char const*>(encoded_object.data),
-                encoded_object.size);
+                reinterpret_cast<char const*>(encoded_object.data()),
+                encoded_object.size());
             break;
         case input_data_encoding::YAML:
             decoded_object = parse_yaml_value(
-                reinterpret_cast<char const*>(encoded_object.data),
-                encoded_object.size);
+                reinterpret_cast<char const*>(encoded_object.data()),
+                encoded_object.size());
             break;
         case input_data_encoding::MSGPACK:
             decoded_object = parse_msgpack_value(
-                reinterpret_cast<uint8_t const*>(encoded_object.data),
-                encoded_object.size);
+                reinterpret_cast<uint8_t const*>(encoded_object.data()),
+                encoded_object.size());
             break;
     }
 
@@ -398,8 +398,8 @@ coerce_encoded_object(
 {
     std::string data_hash;
     picosha2::hash256_hex_string(
-        encoded_object.data,
-        encoded_object.data + encoded_object.size,
+        encoded_object.data(),
+        encoded_object.data() + encoded_object.size(),
         data_hash);
 
     auto cache_key = make_sha256_hashed_id(

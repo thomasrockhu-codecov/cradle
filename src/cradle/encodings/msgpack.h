@@ -19,7 +19,9 @@ parse_msgpack_value(string const& msgpack);
 // data rather than copying them.
 dynamic
 parse_msgpack_value(
-    ownership_holder const& ownership, uint8_t const* data, size_t size);
+    std::shared_ptr<char const> const& data_owner,
+    uint8_t const* data,
+    size_t size);
 
 string
 value_to_msgpack_string(dynamic const& v);

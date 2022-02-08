@@ -9,7 +9,6 @@
 #include <cstring>
 #include <queue>
 
-#include <boost/shared_array.hpp>
 #include <boost/static_assert.hpp>
 
 #include <cradle/io/endian.h>
@@ -49,7 +48,7 @@ IncomingMessage
 read_message(tcp::socket& socket, uint8_t ipc_version)
 {
     // Read the header.
-    boost::shared_array<uint8_t> header_buffer(
+    std::shared_ptr<uint8_t[]> header_buffer(
         new uint8_t[ipc_message_header_size]);
     boost::asio::read(
         socket,
@@ -64,7 +63,7 @@ read_message(tcp::socket& socket, uint8_t ipc_version)
 
     // Read the body.
     auto body_length = boost::numeric_cast<size_t>(header.body_length);
-    boost::shared_array<uint8_t> body_buffer(new uint8_t[body_length]);
+    std::shared_ptr<uint8_t[]> body_buffer(new uint8_t[body_length]);
     boost::asio::read(
         socket, boost::asio::buffer(body_buffer.get(), body_length));
     IncomingMessage message;

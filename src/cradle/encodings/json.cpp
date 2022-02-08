@@ -134,20 +134,19 @@ read_json_value(simdjson::dom::element const& json)
                     && json_blob.value().is_string())
                 {
                     auto encoded = json_blob.value().get_string().value();
-                    blob x;
-                    size_t decoded_size
+                    size_t max_decoded_size
                         = get_base64_decoded_length(encoded.length());
-                    std::shared_ptr<uint8_t> ptr(
-                        new uint8_t[decoded_size], array_deleter<uint8_t>());
-                    x.ownership = ptr;
-                    x.data = reinterpret_cast<char const*>(ptr.get());
+                    char* data = new char[max_decoded_size];
+                    std::shared_ptr<char const> ptr(
+                        data, array_deleter<char>());
+                    size_t decoded_size;
                     base64_decode(
-                        ptr.get(),
-                        &x.size,
+                        reinterpret_cast<uint8_t*>(data),
+                        &decoded_size,
                         encoded.data(),
                         encoded.length(),
                         get_mime_base64_character_set());
-                    return x;
+                    return blob(ptr, decoded_size);
                 }
                 else
                 {
@@ -229,8 +228,8 @@ to_nlohmann_json(dynamic const& v)
             nlohmann::json json;
             json["type"] = "base64-encoded-blob";
             json["blob"] = base64_encode(
-                reinterpret_cast<uint8_t const*>(x.data),
-                x.size,
+                reinterpret_cast<uint8_t const*>(x.data()),
+                x.size(),
                 get_mime_base64_character_set());
             return json;
         }
@@ -284,15 +283,7 @@ value_to_json(dynamic const& v)
 blob
 value_to_json_blob(dynamic const& v)
 {
-    string json = value_to_json(v);
-    blob blob;
-    // Don't include the terminating '\0'.
-    std::shared_ptr<char> ptr(new char[json.length()], array_deleter<char>());
-    blob.ownership = ptr;
-    blob.data = ptr.get();
-    memcpy(ptr.get(), json.c_str(), json.length());
-    blob.size = json.length();
-    return blob;
+    return make_blob(value_to_json(v));
 }
 
 } // namespace cradle

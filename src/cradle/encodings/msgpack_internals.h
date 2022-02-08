@@ -69,17 +69,17 @@ write_msgpack_value(msgpack::packer<Buffer>& packer, dynamic const& v)
             blob const& x = cast<blob>(v);
             // Check to make sure that the blob size is within the MessagePack
             // specification's limit.
-            if (x.size >= 0x1'00'00'00'00)
+            if (x.size() >= 0x1'00'00'00'00)
             {
                 CRADLE_THROW(
                     msgpack_blob_size_limit_exceeded()
-                    << msgpack_blob_size_info(x.size)
+                    << msgpack_blob_size_info(x.size())
                     << msgpack_blob_size_limit_info(0x1'00'00'00'00));
             }
-            packer.pack_bin(boost::numeric_cast<uint32_t>(x.size));
+            packer.pack_bin(boost::numeric_cast<uint32_t>(x.size()));
             packer.pack_bin_body(
-                reinterpret_cast<char const*>(x.data),
-                boost::numeric_cast<uint32_t>(x.size));
+                reinterpret_cast<char const*>(x.data()),
+                boost::numeric_cast<uint32_t>(x.size()));
             break;
         }
         case value_type::DATETIME: {

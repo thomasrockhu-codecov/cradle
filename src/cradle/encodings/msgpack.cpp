@@ -5,9 +5,10 @@
 
 namespace cradle {
 
-static dynamic
+template<class OwnedData>
+dynamic
 read_msgpack_value(
-    ownership_holder const& ownership, msgpack::object const& object)
+    std::shared_ptr<OwnedData> const& ownership, msgpack::object const& object)
 {
     switch (object.type)
     {
@@ -28,11 +29,9 @@ read_msgpack_value(
             return s;
         }
         case msgpack::type::BIN: {
-            blob b;
-            b.ownership = ownership;
-            b.size = object.via.bin.size;
-            b.data = object.via.bin.ptr;
-            return b;
+            return blob(
+                std::shared_ptr<char const>(ownership, object.via.bin.ptr),
+                object.via.bin.size);
         }
         case msgpack::type::ARRAY: {
             size_t size = object.via.array.size;
@@ -119,12 +118,9 @@ parse_msgpack_value(uint8_t const* data, size_t size)
     // use.
     msgpack::object_handle handle
         = msgpack::unpack(reinterpret_cast<char const*>(data), size);
-    std::shared_ptr<msgpack::object_handle> shared_handle(
-        new msgpack::object_handle);
-    *shared_handle = std::move(handle);
-    ownership_holder ownership;
-    ownership = shared_handle;
-    return read_msgpack_value(ownership, shared_handle->get());
+    auto shared_handle
+        = std::make_shared<msgpack::object_handle>(std::move(handle));
+    return read_msgpack_value(shared_handle, shared_handle->get());
 }
 
 dynamic
@@ -146,13 +142,15 @@ msgpack_unpack_reference_type(msgpack::type::object_type type, size_t, void*)
 
 dynamic
 parse_msgpack_value(
-    ownership_holder const& ownership, uint8_t const* data, size_t size)
+    std::shared_ptr<char const> const& data_owner,
+    uint8_t const* data,
+    size_t size)
 {
     msgpack::object_handle handle = msgpack::unpack(
         reinterpret_cast<char const*>(data),
         size,
         msgpack_unpack_reference_type);
-    return read_msgpack_value(ownership, handle.get());
+    return read_msgpack_value(data_owner, handle.get());
 }
 
 string
@@ -170,11 +168,9 @@ value_to_msgpack_blob(dynamic const& v)
     std::shared_ptr<msgpack::sbuffer> sbuffer(new msgpack::sbuffer);
     msgpack::packer<msgpack::sbuffer> packer(*sbuffer);
     write_msgpack_value(packer, v);
-    blob b;
-    b.ownership = sbuffer;
-    b.data = sbuffer->data();
-    b.size = sbuffer->size();
-    return b;
+    return blob(
+        std::shared_ptr<char const>(sbuffer, sbuffer->data()),
+        sbuffer->size());
 }
 
 } // namespace cradle

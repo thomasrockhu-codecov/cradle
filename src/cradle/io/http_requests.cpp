@@ -23,15 +23,16 @@ dynamic
 parse_json_response(http_response const& response)
 {
     return parse_json_value(
-        reinterpret_cast<char const*>(response.body.data), response.body.size);
+        reinterpret_cast<char const*>(response.body.data()),
+        response.body.size());
 }
 
 dynamic
 parse_msgpack_response(http_response const& response)
 {
     return parse_msgpack_value(
-        reinterpret_cast<uint8_t const*>(response.body.data),
-        response.body.size);
+        reinterpret_cast<uint8_t const*>(response.body.data()),
+        response.body.size());
 }
 
 http_response
@@ -119,7 +120,7 @@ transmit_request_body(void* ptr, size_t size, size_t nmemb, void* userdata)
     send_transmission_state& state
         = *reinterpret_cast<send_transmission_state*>(userdata);
     size_t n_bytes
-        = (std::min)(size * nmemb, state.data_length - state.read_position);
+        = (std::min) (size * nmemb, state.data_length - state.read_position);
     if (n_bytes > 0)
     {
         assert(state.data);
@@ -186,8 +187,8 @@ set_up_send_transmission(
     send_transmission_state& send_state,
     http_request const& request)
 {
-    send_state.data = request.body.data;
-    send_state.data_length = request.body.size;
+    send_state.data = request.body.data();
+    send_state.data_length = request.body.size();
     curl_easy_setopt(curl, CURLOPT_READFUNCTION, transmit_request_body);
     curl_easy_setopt(curl, CURLOPT_READDATA, &send_state);
 }
@@ -230,12 +231,8 @@ struct scoped_curl_slist
 static blob
 make_blob(receive_transmission_state&& transmission)
 {
-    blob result;
-    result.data = transmission.buffer.get();
-    result.ownership
-        = std::shared_ptr<char>(transmission.buffer.release(), free);
-    result.size = transmission.write_position;
-    return result;
+    std::shared_ptr<char const> ptr(transmission.buffer.release(), free);
+    return blob(ptr, transmission.write_position);
 }
 
 http_request
@@ -296,7 +293,9 @@ http_connection::perform_request(
             set_up_send_transmission(curl, send_state, request);
             curl_easy_setopt(curl, CURLOPT_UPLOAD, 1);
             curl_easy_setopt(
-                curl, CURLOPT_INFILESIZE_LARGE, curl_off_t(request.body.size));
+                curl,
+                CURLOPT_INFILESIZE_LARGE,
+                curl_off_t(request.body.size()));
             break;
 
         case http_request_method::PATCH:
@@ -309,7 +308,7 @@ http_connection::perform_request(
             curl_easy_setopt(
                 curl,
                 CURLOPT_POSTFIELDSIZE_LARGE,
-                curl_off_t(request.body.size));
+                curl_off_t(request.body.size()));
             break;
 
         case http_request_method::DELETE:

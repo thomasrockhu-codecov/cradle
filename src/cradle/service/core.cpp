@@ -107,9 +107,10 @@ deserialize(blob* dst, std::string src)
 void
 deserialize(blob* dst, std::unique_ptr<uint8_t[]> ptr, size_t size)
 {
-    dst->data = reinterpret_cast<char const*>(ptr.get());
-    dst->ownership = std::shared_ptr<uint8_t[]>{std::move(ptr)};
-    dst->size = size;
+    *dst = blob(
+        reinterpret_pointer_cast<char const>(
+            std::shared_ptr<uint8_t[]>{std::move(ptr)}),
+        size);
 }
 
 void
@@ -214,18 +215,18 @@ generic_disk_cached(
         {
             blob encoded_data;
             detail::serialize(&encoded_data, std::move(result));
-            if (encoded_data.size > 1024)
+            if (encoded_data.size() > 1024)
             {
                 size_t max_compressed_size
-                    = lz4::max_compressed_size(encoded_data.size);
+                    = lz4::max_compressed_size(encoded_data.size());
 
                 std::unique_ptr<uint8_t[]> compressed_data(
                     new uint8_t[max_compressed_size]);
                 size_t actual_compressed_size = lz4::compress(
                     compressed_data.get(),
                     max_compressed_size,
-                    encoded_data.data,
-                    encoded_data.size);
+                    encoded_data.data(),
+                    encoded_data.size());
 
                 auto cache_id = cache.initiate_insert(key);
                 {
@@ -240,17 +241,17 @@ generic_disk_cached(
                         actual_compressed_size);
                 }
                 boost::crc_32_type crc;
-                crc.process_bytes(encoded_data.data, encoded_data.size);
+                crc.process_bytes(encoded_data.data(), encoded_data.size());
                 cache.finish_insert(
-                    cache_id, crc.checksum(), encoded_data.size);
+                    cache_id, crc.checksum(), encoded_data.size());
             }
             else
             {
                 cache.insert(
                     key,
                     base64_encode(
-                        reinterpret_cast<uint8_t const*>(encoded_data.data),
-                        encoded_data.size,
+                        reinterpret_cast<uint8_t const*>(encoded_data.data()),
+                        encoded_data.size(),
                         get_mime_base64_character_set()));
             }
         }

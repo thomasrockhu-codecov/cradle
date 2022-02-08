@@ -147,13 +147,13 @@ struct dynamic_caster<blob>
     static blob const&
     cast(dynamic const& v)
     {
-        return *std::get<std::shared_ptr<blob>>(v.contents());
+        return std::get<blob>(v.contents());
     }
 
     static blob&
     cast(dynamic& v)
     {
-        return *std::get<std::shared_ptr<blob>>(v.contents());
+        return std::get<blob>(v.contents());
     }
 };
 
