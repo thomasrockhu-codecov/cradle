@@ -10,7 +10,21 @@ or [milestone-one-details.md](generated/milestone-one-details.md) for the rest.
 
 
 ## External C++ API
-Tasks:
+### Story
+As an Astroid developer working on C++ desktop applications, I'd like to be able to interface to OpenCradle using a native, in-process C++ API instead of WebSockets. I'd like to access all the primary functionality that OpenCradle already provides plus be able to specify my own calculation functions as in-process C++ functions.
+
+Things to do:
+* Define the external C++ API
+* Create (integration) tests covering all exposed functions
+* Implementation in C++
+
+Definition of done:
+* API defined
+* All tests pass
+* Some PUMA functtionality ported to C++, and working with the new API
+
+
+### Tasks
 1. Define the external C++ API
    - See [cppapi.md](cppapi.md)
    - Will include the new blob
@@ -18,7 +32,7 @@ Tasks:
    - Initial tests exercising the new API
    - Empty/dummy implementation
    - Extend build system
-1. Implemention in C++
+1. Implementation in C++
    - Add more tests on the new API, if needed
 1. Demo (run new tests)
 
