@@ -293,6 +293,7 @@ target_link_libraries(cradle PUBLIC
 target_compile_definitions(
     cradle PUBLIC ${CONAN_DEFINES} ${CONAN_COMPILE_DEFINITIONS})
 target_include_directories(cradle PUBLIC
+    include
     ${generated_include_dir}/src
     src
     src/third-party)
@@ -317,6 +318,19 @@ target_include_directories(unit_test_runner
 # Catch specially.
 set_source_files_properties(
     tests/runner.cpp
+    PROPERTIES
+        SKIP_PRECOMPILE_HEADERS ON)
+
+# Add the external test runner.
+file(GLOB_RECURSE EXTERNAL_TEST_FILES CONFIGURE_DEPENDS "external-tests/*.cpp")
+add_executable(external_test_runner ${EXTERNAL_TEST_FILES})
+target_link_libraries(external_test_runner cradle)
+target_include_directories(external_test_runner
+    PRIVATE include ${CMAKE_CURRENT_SOURCE_DIR}/external_tests)
+# Don't use precompiled headers for the test runner since it needs to include
+# Catch specially.
+set_source_files_properties(
+    external-tests/runner.cpp
     PROPERTIES
         SKIP_PRECOMPILE_HEADERS ON)
 
