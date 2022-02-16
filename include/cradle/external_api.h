@@ -1,5 +1,3 @@
-// include/cradle/external_api.h
-
 #ifndef INCLUDE_CRADLE_EXTERNAL_API_H
 #define INCLUDE_CRADLE_EXTERNAL_API_H
 
@@ -11,8 +9,8 @@
 #include <cppcoro/shared_task.hpp>
 #include <cppcoro/task.hpp>
 
-#include <cradle/core/type_definitions.h>  // blob
-#include <cradle/thinknode/types.hpp>  // calculation_request
+#include <cradle/core/type_definitions.h> // blob
+#include <cradle/thinknode/types.hpp> // calculation_request
 
 namespace cradle {
 
@@ -46,86 +44,85 @@ struct api_thinknode_session_config
 {
     std::string api_url;
     std::string access_token;
-    std::string realm_name;
 };
 
-struct api_service_interface;
-struct api_session_interface;
+struct api_service;
+struct api_session;
 
-// The client owns the service, and is responsible for stopping it by letting the unique_ptr go out of scope
-// (or doing a service.reset()).
-std::unique_ptr<api_service_interface>
+// The client owns the service, and is responsible for stopping it by letting
+// the unique_ptr go out of scope (or doing a service.reset()).
+std::unique_ptr<api_service>
 start_service(api_service_config const& config);
 
-struct api_service_interface
-{
-    // Note: must not throw
-    virtual ~api_service_interface() = default;
+std::unique_ptr<api_session>
+start_thinknode_session(
+    api_service& service, api_thinknode_session_config const& config);
 
-    // Also retrieves context_id for the realm, and does registration.
-    // So a thinknode session in this API is a combination of thinknode_session (api_url, token),
-    // and context_id, as appearing in CRADLE internally.
-    virtual std::unique_ptr<api_session_interface>
-    start_thinknode_session(api_thinknode_session_config const& config) = 0;
-};
+cppcoro::task<std::string>
+get_context_id(api_session& session, std::string realm);
 
-struct api_session_interface
-{
-    // Note: must not throw
-    virtual ~api_session_interface() = default;
+cppcoro::shared_task<blob>
+get_iss_object(
+    api_session& session,
+    std::string context_id,
+    std::string object_id,
+    bool ignore_upgrades = false);
 
-    virtual cppcoro::shared_task<blob>
-    get_iss_object(
-        string object_id,
-        bool ignore_upgrades = false) = 0;
+cppcoro::shared_task<std::string>
+resolve_iss_object_to_immutable(
+    api_session& session,
+    std::string context_id,
+    std::string object_id,
+    bool ignore_upgrades = false);
 
-    virtual cppcoro::shared_task<string>
-    resolve_iss_object_to_immutable(
-        string object_id,
-        bool ignore_upgrades = false) = 0;
+cppcoro::shared_task<std::map<std::string, std::string>>
+get_iss_object_metadata(
+    api_session& session, std::string context_id, std::string object_id);
 
-    virtual cppcoro::shared_task<std::map<string, string>>
-    get_iss_object_metadata(
-        string object_id) = 0;
+// Returns object_id
+cppcoro::shared_task<std::string>
+post_iss_object(
+    api_session& session,
+    std::string context_id,
+    std::string schema, // URL-type string
+    blob object_data);
 
-    // Returns object_id
-    virtual cppcoro::shared_task<string>
-    post_iss_object(
-        std::string schema,     // URL-type string
-        blob object_data) = 0;
+// shared_task?
+cppcoro::task<>
+copy_iss_object(
+    api_session& session,
+    std::string source_context_id,
+    std::string destination_context_id,
+    std::string object_id);
 
-    // shared_task?
-    virtual cppcoro::task<>
-    copy_iss_object(
-        api_session_interface& destination,
-        std::string object_id) = 0;
+// shared_task?
+cppcoro::task<>
+copy_calculation(
+    api_session& session,
+    std::string source_context_id,
+    std::string destination_context_id,
+    std::string calculation_id);
 
-    // shared_task?
-    virtual cppcoro::task<>
-    copy_calculation(
-        api_session_interface& destination,
-        std::string calculation_id) = 0;
+// Returns calculation_id
+// shared_task?
+// TODO unify with perform_local_calculation()
+cppcoro::task<std::string>
+post_calculation(
+    api_session& session, std::string context_id, calculation_request request);
 
-    // Returns calculation_id
-    // shared_task?
-    // TODO get rid of calculation_request
-    // TODO unify with perform_local_calculation()
-    virtual cppcoro::task<std::string>
-    post_calculation(
-        calculation_request request) = 0;
+cppcoro::shared_task<calculation_request>
+retrieve_calculation_request(
+    api_session& session, std::string context_id, std::string calculation_id);
 
-    virtual cppcoro::shared_task<calculation_request>
-    retrieve_calculation_request(
-        std::string calculation_id) = 0;
-
-    // Returns calculation_id; or blob?
-    virtual cppcoro::task<std::string>
-    perform_local_calculation(
-        calculation_request request) = 0;
-};
+// Returns calculation_id; or blob?
+cppcoro::task<std::string>
+perform_local_calculation(
+    api_session& session, std::string context_id, calculation_request request);
 
 } // namespace external
 
 } // namespace cradle
+
+#include <cradle/external/external_api_impl.h> // unique_ptr's deleter needs complete types
 
 #endif
