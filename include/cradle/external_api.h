@@ -55,7 +55,7 @@ std::unique_ptr<api_service>
 start_service(api_service_config const& config);
 
 std::unique_ptr<api_session>
-start_thinknode_session(
+start_session(
     api_service& service, api_thinknode_session_config const& config);
 
 cppcoro::task<std::string>
