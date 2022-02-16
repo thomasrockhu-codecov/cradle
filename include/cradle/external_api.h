@@ -103,21 +103,18 @@ copy_calculation(
     std::string destination_context_id,
     std::string calculation_id);
 
-// Returns calculation_id
+// Returns calculation_id (also for local calculation!)
 // shared_task?
-// TODO unify with perform_local_calculation()
 cppcoro::task<std::string>
 post_calculation(
-    api_session& session, std::string context_id, calculation_request request);
+    api_session& session,
+    std::string context_id,
+    calculation_request request,
+    bool execute_locally);
 
 cppcoro::shared_task<calculation_request>
 retrieve_calculation_request(
     api_session& session, std::string context_id, std::string calculation_id);
-
-// Returns calculation_id; or blob?
-cppcoro::task<std::string>
-perform_local_calculation(
-    api_session& session, std::string context_id, calculation_request request);
 
 } // namespace external
 

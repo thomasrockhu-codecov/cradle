@@ -267,4 +267,18 @@ make_blob(byte_vector v)
     return b;
 }
 
+// LAMBDA
+
+void
+to_dynamic(dynamic* v, lambda_wrapper const& x)
+{
+    *v = static_cast<integer>(hash_value(x));
+}
+
+void
+from_dynamic(lambda_wrapper* x, dynamic const& v)
+{
+    // TODO is this used?
+}
+
 } // namespace cradle

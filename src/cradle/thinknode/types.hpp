@@ -62,6 +62,7 @@ union thinknode_type_info
 };
 
 struct function_application;
+struct lambda_call;
 struct calculation_array_request;
 struct calculation_item_request;
 struct calculation_object_request;
@@ -76,6 +77,7 @@ union calculation_request
     std::string reference;
     dynamic value;
     function_application function;
+    lambda_call lambda;
     calculation_array_request array;
     calculation_item_request item;
     calculation_object_request object;
@@ -94,6 +96,13 @@ struct function_application
     std::string name;
     omissible<cradle::integer> level;
     std::vector<cradle::calculation_request> args;
+};
+
+api(struct)
+struct lambda_call
+{
+    lambda_wrapper func;
+    cradle::dynamic_array args;
 };
 
 api(struct)

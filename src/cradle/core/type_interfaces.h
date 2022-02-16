@@ -595,6 +595,76 @@ from_dynamic(optional<T>* x, cradle::dynamic const& v)
     }
 }
 
+// LAMBDA
+
+typedef dynamic(lambda_function)(cradle::dynamic_array const& args);
+
+struct lambda_wrapper
+{
+    lambda_wrapper() : func_{nullptr}
+    {
+    }
+
+    lambda_wrapper(lambda_function* func) : func_{func}
+    {
+    }
+
+    dynamic
+    operator()(cradle::dynamic_array const& args)
+    {
+        return func_(args);
+    }
+
+    friend bool
+    operator==(lambda_wrapper const& a, lambda_wrapper const& b)
+    {
+        return a.func_ == b.func_;
+    }
+
+    friend bool
+    operator!=(lambda_wrapper const& a, lambda_wrapper const& b)
+    {
+        return !(a == b);
+    }
+
+    friend bool
+    operator<(lambda_wrapper const& a, lambda_wrapper const& b)
+    {
+        return a.func_ < b.func_;
+    }
+
+    friend size_t
+    hash_value(lambda_wrapper const& value)
+    {
+        return cradle::invoke_hash(value.func_);
+    }
+
+ private:
+    lambda_function* func_;
+};
+
+template<>
+struct type_info_query<lambda_wrapper>
+{
+    static void
+    get(api_type_info* info)
+    {
+        // TODO
+        assert(false);
+    }
+};
+
+inline size_t deep_sizeof(lambda_wrapper)
+{
+    return sizeof(lambda_wrapper);
+}
+
+void
+to_dynamic(dynamic* v, lambda_wrapper const& x);
+
+void
+from_dynamic(lambda_wrapper* x, dynamic const& v);
+
 } // namespace cradle
 
 #endif
