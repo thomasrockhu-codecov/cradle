@@ -55,6 +55,7 @@
 #include <cradle/utilities/functional.h>
 #include <cradle/utilities/logging.h>
 #include <cradle/utilities/text.h>
+#include <cradle/websocket/lambda_call.h>
 #include <cradle/websocket/local_calcs.h>
 #include <cradle/websocket/messages.hpp>
 
@@ -1055,6 +1056,12 @@ post_calculation_piecewise(
                 make_calculation_cast_request(
                     as_cast(request).schema,
                     co_await recurse(as_cast(request).object)));
+            break;
+        case calculation_request_tag::LAMBDA:
+            // TODO recurse
+            co_return make_calculation_request_with_reference(
+                co_await do_lambda_call_cached(
+                    core, session, context_id, as_lambda(request)));
             break;
         default:
             CRADLE_THROW(

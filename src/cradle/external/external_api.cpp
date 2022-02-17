@@ -12,6 +12,13 @@ get_iss_blob(
     std::string object_id,
     bool ignore_upgrades);
 
+cppcoro::task<std::string>
+post_calculation_piecewise(
+    service_core& core,
+    thinknode_session session,
+    string context_id,
+    calculation_request request);
+
 namespace external {
 
 std::unique_ptr<api_service>
@@ -59,6 +66,17 @@ get_iss_object(
         context_id,
         object_id,
         ignore_upgrades);
+}
+
+cppcoro::task<std::string>
+post_calculation(
+    api_session& session, std::string context_id, calculation_request request)
+{
+    return post_calculation_piecewise(
+        session.get_service_core(),
+        session.thinknode_session_,
+        context_id,
+        request);
 }
 
 } // namespace external

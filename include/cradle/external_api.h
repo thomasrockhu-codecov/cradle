@@ -107,10 +107,7 @@ copy_calculation(
 // shared_task?
 cppcoro::task<std::string>
 post_calculation(
-    api_session& session,
-    std::string context_id,
-    calculation_request request,
-    bool execute_locally);
+    api_session& session, std::string context_id, calculation_request request);
 
 cppcoro::shared_task<calculation_request>
 retrieve_calculation_request(

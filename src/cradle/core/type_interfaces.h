@@ -610,7 +610,7 @@ struct lambda_wrapper
     }
 
     dynamic
-    operator()(cradle::dynamic_array const& args)
+    operator()(cradle::dynamic_array const& args) const
     {
         return func_(args);
     }
