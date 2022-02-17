@@ -120,6 +120,9 @@ retrieve_calculation_request(
 
 } // namespace cradle
 
-#include <cradle/external/external_api_impl.h> // unique_ptr's deleter needs complete types
+// Client cannot just #include external_api.h because unique_ptr's deleter
+// needs complete types. Use shared_ptr? Or some non-std:: type-erasing unique
+// pointer?
+#include <cradle/external/external_api_impl.h>
 
 #endif

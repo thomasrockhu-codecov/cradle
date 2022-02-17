@@ -1,10 +1,9 @@
-#include <stdexcept>
-
 #include <cradle/external_api.h>
 
 namespace cradle {
 
 // In websocket/server.cpp
+// TODO put in a header file
 extern cppcoro::shared_task<blob>
 get_iss_blob(
     cradle::service_core& service,
@@ -14,13 +13,6 @@ get_iss_blob(
     bool ignore_upgrades);
 
 namespace external {
-
-struct NotImplementedError : public std::logic_error
-{
-    NotImplementedError() : std::logic_error("Not implemented")
-    {
-    }
-};
 
 std::unique_ptr<api_service>
 start_service(api_service_config const& config)
@@ -40,10 +32,6 @@ api_service::api_service(api_service_config const& config)
 {
 }
 
-api_service::~api_service()
-{
-}
-
 std::unique_ptr<api_session>
 start_session(api_service& service, api_thinknode_session_config const& config)
 {
@@ -55,10 +43,6 @@ api_session::api_session(
     : service_{service},
       thinknode_session_{
           cradle::make_thinknode_session(config.api_url, config.access_token)}
-{
-}
-
-api_session::~api_session()
 {
 }
 
