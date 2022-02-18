@@ -11,7 +11,7 @@ void
 read_message_body(
     thinknode_supervisor_message* message,
     uint8_t code,
-    boost::shared_array<uint8_t> const& body,
+    std::shared_ptr<uint8_t[]> const& body,
     size_t length)
 {
     raw_input_buffer buffer(body.get(), length);
@@ -25,13 +25,14 @@ read_message_body(
             request.args.resize(n_args);
             // Allow the arguments to claim ownership of the buffer in case
             // they want to reference data directly from it.
-            ownership_holder ownership(body);
             for (uint16_t i = 0; i != n_args; ++i)
             {
                 auto arg_length
                     = boost::numeric_cast<size_t>(read_int<uint64_t>(reader));
                 request.args[i] = parse_msgpack_value(
-                    ownership, buffer.data(), arg_length);
+                    reinterpret_pointer_cast<char const>(body),
+                    buffer.data(),
+                    arg_length);
                 buffer.advance(arg_length);
             }
             *message = make_thinknode_supervisor_message_with_function(
@@ -53,7 +54,7 @@ void
 read_message_body(
     thinknode_provider_message* message,
     uint8_t code,
-    boost::shared_array<uint8_t> const& body,
+    std::shared_ptr<uint8_t[]> const& body,
     size_t length)
 {
     raw_input_buffer buffer(body.get(), length);
@@ -84,9 +85,11 @@ read_message_body(
         case calc_message_code::RESULT: {
             // Allow the dynamic value to claim ownership of the buffer in case
             // it wants to reference data directly from it.
-            ownership_holder ownership(body);
             *message = make_thinknode_provider_message_with_result(
-                parse_msgpack_value(ownership, buffer.data(), buffer.size()));
+                parse_msgpack_value(
+                    reinterpret_pointer_cast<char const>(body),
+                    buffer.data(),
+                    buffer.size()));
             break;
         }
         case calc_message_code::FAILURE: {

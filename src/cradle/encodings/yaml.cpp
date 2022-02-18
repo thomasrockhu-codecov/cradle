@@ -155,20 +155,19 @@ read_yaml_value(YAML::Node const& yaml)
                 if (yaml_blob && yaml_blob.IsScalar())
                 {
                     string encoded = yaml_blob.as<string>();
-                    blob x;
-                    size_t decoded_size
+                    size_t max_decoded_size
                         = get_base64_decoded_length(encoded.length());
-                    std::shared_ptr<uint8_t> ptr(
-                        new uint8_t[decoded_size], array_deleter<uint8_t>());
-                    x.ownership = ptr;
-                    x.data = reinterpret_cast<char const*>(ptr.get());
+                    std::byte* data = new std::byte[max_decoded_size];
+                    std::shared_ptr<std::byte const> ptr(
+                        data, array_deleter<std::byte>());
+                    std::size_t decoded_size;
                     base64_decode(
-                        ptr.get(),
-                        &x.size,
+                        reinterpret_cast<uint8_t*>(data),
+                        &decoded_size,
                         encoded.c_str(),
                         encoded.length(),
                         get_mime_base64_character_set());
-                    return x;
+                    return blob(ptr, decoded_size);
                 }
                 else
                 {
@@ -255,8 +254,8 @@ emit_yaml_value(YAML::Emitter& out, dynamic const& v)
             YAML::Node yaml;
             yaml["type"] = "base64-encoded-blob";
             yaml["blob"] = base64_encode(
-                reinterpret_cast<uint8_t const*>(x.data),
-                x.size,
+                reinterpret_cast<uint8_t const*>(x.data()),
+                x.size(),
                 get_mime_base64_character_set());
             out << yaml;
             break;
@@ -303,12 +302,12 @@ value_to_yaml(dynamic const& v)
 static bool
 is_printable(blob const& x)
 {
-    if (x.size > 1024)
+    if (x.size() > 1024)
         return false;
 
-    for (size_t i = 0; i != x.size; ++i)
+    for (size_t i = 0; i != x.size(); ++i)
     {
-        if (reinterpret_cast<unsigned char const*>(x.data)[i] > 127)
+        if (reinterpret_cast<unsigned char const*>(x.data())[i] > 127)
             return false;
     }
 
@@ -349,16 +348,17 @@ emit_diagnostic_yaml_value(YAML::Emitter& out, dynamic const& v)
         }
         case value_type::BLOB: {
             blob const& x = cast<blob>(v);
-            if (x.size != 0 && is_printable(x))
+            if (x.size() != 0 && is_printable(x))
             {
                 out << YAML::Literal
                     << "<blob>\n"
                            + string(
-                               reinterpret_cast<char const*>(x.data), x.size);
+                               reinterpret_cast<char const*>(x.data()),
+                               x.size());
             }
             else
             {
-                out << "<blob - size: " + lexical_cast<string>(x.size)
+                out << "<blob - size: " + lexical_cast<string>(x.size())
                            + " bytes>";
             }
             break;
@@ -419,29 +419,13 @@ value_to_diagnostic_yaml(dynamic const& v)
 blob
 value_to_yaml_blob(dynamic const& v)
 {
-    string yaml = value_to_yaml(v);
-    blob blob;
-    // Don't include the terminating '\0'.
-    std::shared_ptr<char> ptr(new char[yaml.length()], array_deleter<char>());
-    blob.ownership = ptr;
-    blob.data = ptr.get();
-    memcpy(ptr.get(), yaml.c_str(), yaml.length());
-    blob.size = yaml.length();
-    return blob;
+    return make_blob(value_to_yaml(v));
 }
 
 blob
 value_to_diagnostic_yaml_blob(dynamic const& v)
 {
-    string yaml = value_to_diagnostic_yaml(v);
-    blob blob;
-    // Don't include the terminating '\0'.
-    std::shared_ptr<char> ptr(new char[yaml.length()], array_deleter<char>());
-    blob.ownership = ptr;
-    blob.data = ptr.get();
-    memcpy(ptr.get(), yaml.c_str(), yaml.length());
-    blob.size = yaml.length();
-    return blob;
+    return make_blob(value_to_diagnostic_yaml(v));
 }
 
 } // namespace cradle

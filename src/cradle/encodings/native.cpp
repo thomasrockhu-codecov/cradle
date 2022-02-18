@@ -49,14 +49,12 @@ read_natively_encoded_value(raw_memory_reader<raw_input_buffer>& r, dynamic& v)
         case value_type::BLOB: {
             uint64_t length;
             raw_read(r, &length, 8);
-            blob x;
-            x.size = boost::numeric_cast<size_t>(length);
-            std::shared_ptr<uint8_t> ptr(
-                new uint8_t[x.size], array_deleter<uint8_t>());
-            x.ownership = ptr;
-            x.data = reinterpret_cast<char const*>(ptr.get());
-            raw_read(r, const_cast<char*>(x.data), x.size);
-            v = x;
+            auto size = boost::numeric_cast<size_t>(length);
+            std::byte* data = new std::byte[size];
+            std::shared_ptr<std::byte const> ptr(
+                data, array_deleter<std::byte>());
+            raw_read(r, data, size);
+            v = blob(ptr, size);
             break;
         }
         case value_type::DATETIME: {
@@ -134,9 +132,9 @@ write_natively_encoded_value(raw_memory_writer<Buffer>& w, dynamic const& v)
             break;
         case value_type::BLOB: {
             blob const& x = cast<blob>(v);
-            uint64_t length = x.size;
+            uint64_t length = x.size();
             raw_write(w, &length, 8);
-            raw_write(w, x.data, x.size);
+            raw_write(w, x.data(), x.size());
             break;
         }
         case value_type::DATETIME: {

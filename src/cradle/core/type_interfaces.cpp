@@ -209,16 +209,17 @@ from_dynamic(ptime* x, dynamic const& v)
 bool
 operator==(blob const& a, blob const& b)
 {
-    return a.size == b.size
-           && (a.data == b.data || std::memcmp(a.data, b.data, a.size) == 0);
+    return a.size() == b.size()
+           && (a.data() == b.data()
+               || std::memcmp(a.data(), b.data(), a.size()) == 0);
 }
 
 bool
 operator<(blob const& a, blob const& b)
 {
-    return a.size < b.size
-           || (a.size == b.size && a.data != b.data
-               && std::memcmp(a.data, b.data, a.size) < 0);
+    return a.size() < b.size()
+           || (a.size() == b.size() && a.data() != b.data()
+               && std::memcmp(a.data(), b.data(), a.size()) < 0);
 }
 
 void
@@ -236,35 +237,42 @@ from_dynamic(blob* x, dynamic const& v)
 size_t
 hash_value(blob const& x)
 {
-    uint8_t const* bytes = reinterpret_cast<uint8_t const*>(x.data);
-    return boost::hash_range(bytes, bytes + x.size);
+    uint8_t const* bytes = reinterpret_cast<uint8_t const*>(x.data());
+    return boost::hash_range(bytes, bytes + x.size());
+}
+
+blob
+make_static_blob(std::byte const* data, size_t size)
+{
+    return blob(
+        std::shared_ptr<std::byte const>(data, [](std::byte const*) {}), size);
+}
+
+blob
+make_string_literal_blob(char const* data)
+{
+    return make_static_blob(as_bytes(data), strlen(data));
 }
 
 blob
 make_blob(string s)
 {
-    blob b;
     // This is a little roundabout, but it seems like the most reasonable way
     // to ensure that a) the string contents don't move if the blob is moved
     // and b) the string contents aren't actually copied if they're large.
-    b.ownership = std::make_shared<string>(std::move(s));
-    string const& owned_string
-        = *std::any_cast<std::shared_ptr<string> const&>(b.ownership);
-    b.data = owned_string.data();
-    b.size = owned_string.size();
-    return b;
+    size_t size = s.size();
+    auto shared_string = std::make_shared<string>(std::move(s));
+    char const* data = shared_string->data();
+    return make_blob(std::move(shared_string), as_bytes(data), size);
 }
 
 blob
 make_blob(byte_vector v)
 {
-    blob b;
-    b.ownership = std::make_shared<byte_vector>(std::move(v));
-    byte_vector const& owned_vector
-        = *std::any_cast<std::shared_ptr<byte_vector> const&>(b.ownership);
-    b.data = reinterpret_cast<char const*>(owned_vector.data());
-    b.size = owned_vector.size();
-    return b;
+    size_t size = v.size();
+    auto shared_vector = std::make_shared<byte_vector>(std::move(v));
+    char const* data = reinterpret_cast<char const*>(shared_vector->data());
+    return make_blob(std::move(shared_vector), as_bytes(data), size);
 }
 
 } // namespace cradle
