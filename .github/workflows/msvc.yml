@@ -46,7 +46,7 @@ jobs:
         path: build/generated
 
   VS2019:
-    runs-on: windows-latest
+    runs-on: windows-2019
     needs: preprocess
 
     strategy:
