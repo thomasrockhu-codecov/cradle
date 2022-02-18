@@ -45,13 +45,12 @@ struct blob
     {
     }
 
-    // TODO: Maybe change this from char to std::byte instead?
-    blob(std::shared_ptr<char const> data, std::size_t size)
+    blob(std::shared_ptr<std::byte const> data, std::size_t size)
         : data_(std::move(data)), size_(size)
     {
     }
 
-    char const*
+    std::byte const*
     data() const
     {
         return data_.get();
@@ -64,7 +63,7 @@ struct blob
     }
 
  private:
-    std::shared_ptr<char const> data_;
+    std::shared_ptr<std::byte const> data_;
     std::size_t size_;
 };
 

@@ -108,7 +108,7 @@ void
 deserialize(blob* dst, std::unique_ptr<uint8_t[]> ptr, size_t size)
 {
     *dst = blob(
-        reinterpret_pointer_cast<char const>(
+        reinterpret_pointer_cast<std::byte const>(
             std::shared_ptr<uint8_t[]>{std::move(ptr)}),
         size);
 }

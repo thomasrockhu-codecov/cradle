@@ -50,8 +50,9 @@ read_natively_encoded_value(raw_memory_reader<raw_input_buffer>& r, dynamic& v)
             uint64_t length;
             raw_read(r, &length, 8);
             auto size = boost::numeric_cast<size_t>(length);
-            char* data = new char[size];
-            std::shared_ptr<char const> ptr(data, array_deleter<char>());
+            std::byte* data = new std::byte[size];
+            std::shared_ptr<std::byte const> ptr(
+                data, array_deleter<std::byte>());
             raw_read(r, data, size);
             v = blob(ptr, size);
             break;

@@ -28,11 +28,9 @@ read_msgpack_value(
             object.convert(s);
             return s;
         }
-        case msgpack::type::BIN: {
-            return blob(
-                std::shared_ptr<char const>(ownership, object.via.bin.ptr),
-                object.via.bin.size);
-        }
+        case msgpack::type::BIN:
+            return make_blob(
+                ownership, as_bytes(object.via.bin.ptr), object.via.bin.size);
         case msgpack::type::ARRAY: {
             size_t size = object.via.array.size;
             dynamic_array array;
@@ -168,9 +166,9 @@ value_to_msgpack_blob(dynamic const& v)
     std::shared_ptr<msgpack::sbuffer> sbuffer(new msgpack::sbuffer);
     msgpack::packer<msgpack::sbuffer> packer(*sbuffer);
     write_msgpack_value(packer, v);
-    return blob(
-        std::shared_ptr<char const>(sbuffer, sbuffer->data()),
-        sbuffer->size());
+    std::byte const* data = as_bytes(sbuffer->data());
+    size_t size = sbuffer->size();
+    return make_blob(std::move(sbuffer), data, size);
 }
 
 } // namespace cradle

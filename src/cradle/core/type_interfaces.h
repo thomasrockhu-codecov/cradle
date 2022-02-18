@@ -313,8 +313,37 @@ to_dynamic(dynamic* v, blob const& x);
 void
 from_dynamic(blob* x, dynamic const& v);
 
+// BLOBS
+
 size_t
 hash_value(blob const& x);
+
+template<class T>
+std::byte const*
+as_bytes(T const* ptr)
+{
+    return reinterpret_cast<std::byte const*>(ptr);
+}
+
+// Make a blob using a shared_ptr to another type that owns the actual
+// content.
+template<class OwnedType>
+blob
+make_blob(std::shared_ptr<OwnedType> ptr, std::byte const* data, size_t size)
+{
+    // Here we are leveraging shared_ptr's flexibility to provide ownership of
+    // another object (of an arbitrary type) while storing a pointer to data
+    // inside that object.
+    return blob(std::shared_ptr<std::byte const>(std::move(ptr), data), size);
+}
+
+// Make a blob that holds a pointer to some statically allocated data.
+blob
+make_static_blob(std::byte const* data, size_t size);
+
+// Make a blob that holds a pointer to some statically allocated data.
+blob
+make_string_literal_blob(char const* data);
 
 // Make a blob that holds the contents of the given string.
 blob

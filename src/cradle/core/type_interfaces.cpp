@@ -242,6 +242,19 @@ hash_value(blob const& x)
 }
 
 blob
+make_static_blob(std::byte const* data, size_t size)
+{
+    return blob(
+        std::shared_ptr<std::byte const>(data, [](std::byte const*) {}), size);
+}
+
+blob
+make_string_literal_blob(char const* data)
+{
+    return make_static_blob(as_bytes(data), strlen(data));
+}
+
+blob
 make_blob(string s)
 {
     // This is a little roundabout, but it seems like the most reasonable way
@@ -250,11 +263,7 @@ make_blob(string s)
     size_t size = s.size();
     auto shared_string = std::make_shared<string>(std::move(s));
     char const* data = shared_string->data();
-    // Here we are leveraging shared_ptr's flexibility to provide ownership of
-    // another object (of an arbitrary type) while storing a pointer to data
-    // inside that object.
-    return blob(
-        std::shared_ptr<char const>(std::move(shared_string), data), size);
+    return make_blob(std::move(shared_string), as_bytes(data), size);
 }
 
 blob
@@ -263,11 +272,7 @@ make_blob(byte_vector v)
     size_t size = v.size();
     auto shared_vector = std::make_shared<byte_vector>(std::move(v));
     char const* data = reinterpret_cast<char const*>(shared_vector->data());
-    // Again, we are leveraging shared_ptr's flexibility to provide ownership
-    // of another object (of an arbitrary type) while storing a pointer to data
-    // inside that object.
-    return blob(
-        std::shared_ptr<char const>(std::move(shared_vector), data), size);
+    return make_blob(std::move(shared_vector), as_bytes(data), size);
 }
 
 } // namespace cradle

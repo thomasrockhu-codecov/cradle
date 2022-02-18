@@ -109,7 +109,7 @@ http_connection::operator=(http_connection&&)
 
 struct send_transmission_state
 {
-    char const* data = nullptr;
+    std::byte const* data = nullptr;
     size_t data_length = 0;
     size_t read_position = 0;
 };
@@ -231,8 +231,11 @@ struct scoped_curl_slist
 static blob
 make_blob(receive_transmission_state&& transmission)
 {
-    std::shared_ptr<char const> ptr(transmission.buffer.release(), free);
-    return blob(ptr, transmission.write_position);
+    return blob(
+        std::shared_ptr<std::byte const>(
+            as_bytes(transmission.buffer.release()),
+            [](std::byte const* ptr) { free(const_cast<std::byte*>(ptr)); }),
+        transmission.write_position);
 }
 
 http_request

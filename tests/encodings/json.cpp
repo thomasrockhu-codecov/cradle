@@ -242,7 +242,6 @@ TEST_CASE("basic JSON encoding", "[encodings][json]")
         "2017-05-26T13:02:03.45Z");
 
     // Try a blob.
-    char blob_data[] = "some blob data";
     test_json_encoding(
         R"(
             {
@@ -250,9 +249,7 @@ TEST_CASE("basic JSON encoding", "[encodings][json]")
                 "type": "base64-encoded-blob"
             }
         )",
-        blob(
-            std::shared_ptr<char const>(blob_data, [](char const*) {}),
-            sizeof(blob_data) - 1));
+        make_string_literal_blob("some blob data"));
 
     // Try some other things that aren't blobs but look similar.
     test_json_encoding(

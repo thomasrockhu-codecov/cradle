@@ -157,9 +157,9 @@ read_yaml_value(YAML::Node const& yaml)
                     string encoded = yaml_blob.as<string>();
                     size_t max_decoded_size
                         = get_base64_decoded_length(encoded.length());
-                    char* data = new char[max_decoded_size];
-                    std::shared_ptr<char const> ptr(
-                        data, array_deleter<char>());
+                    std::byte* data = new std::byte[max_decoded_size];
+                    std::shared_ptr<std::byte const> ptr(
+                        data, array_deleter<std::byte>());
                     std::size_t decoded_size;
                     base64_decode(
                         reinterpret_cast<uint8_t*>(data),

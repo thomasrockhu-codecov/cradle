@@ -397,10 +397,10 @@ coerce_encoded_object(
     blob encoded_object)
 {
     std::string data_hash;
+    uint8_t const* data
+        = reinterpret_cast<uint8_t const*>(encoded_object.data());
     picosha2::hash256_hex_string(
-        encoded_object.data(),
-        encoded_object.data() + encoded_object.size(),
-        data_hash);
+        data, data + encoded_object.size(), data_hash);
 
     auto cache_key = make_sha256_hashed_id(
         "coerce_encoded_object",
