@@ -33,7 +33,7 @@ void
 read_message_body(
     thinknode_supervisor_message* message,
     uint8_t code,
-    boost::shared_array<uint8_t> const& body,
+    std::shared_ptr<uint8_t[]> const& body,
     size_t length);
 
 // provider messsages
@@ -42,7 +42,7 @@ void
 read_message_body(
     thinknode_provider_message* message,
     uint8_t code,
-    boost::shared_array<uint8_t> const& body,
+    std::shared_ptr<uint8_t[]> const& body,
     size_t length);
 
 // The following interface is required of messages that are to be written out

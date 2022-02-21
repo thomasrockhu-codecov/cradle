@@ -41,8 +41,9 @@ TEST_CASE("get_iss_object", "[external]")
     auto blob0 = cppcoro::sync_wait(cradle::external::get_iss_object(
         *session, context_id, "my_object_id"));
 
-    REQUIRE(blob0.size == blob_value.size());
-    REQUIRE(strncmp(blob0.data, blob_value.c_str(), blob_value.size()) == 0);
+    REQUIRE(blob0.size() == blob_value.size());
+    auto blob0_str = reinterpret_cast<const char*>(blob0.data());
+    REQUIRE(strncmp(blob0_str, blob_value.c_str(), blob_value.size()) == 0);
 
     REQUIRE(mock_http.is_complete());
     REQUIRE(mock_http.is_in_order());
@@ -51,6 +52,7 @@ TEST_CASE("get_iss_object", "[external]")
     auto blob1 = cppcoro::sync_wait(cradle::external::get_iss_object(
         *session, context_id, "my_object_id"));
 
-    REQUIRE(blob1.size == blob_value.size());
-    REQUIRE(strncmp(blob1.data, blob_value.c_str(), blob_value.size()) == 0);
+    REQUIRE(blob1.size() == blob_value.size());
+    auto blob1_str = reinterpret_cast<const char*>(blob1.data());
+    REQUIRE(strncmp(blob1_str, blob_value.c_str(), blob_value.size()) == 0);
 }

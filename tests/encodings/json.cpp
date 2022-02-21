@@ -32,8 +32,8 @@ test_json_encoding(string const& json, dynamic const& expected_value)
     auto json_blob = value_to_json_blob(converted_value);
     REQUIRE(
         string(
-            reinterpret_cast<char const*>(json_blob.data),
-            reinterpret_cast<char const*>(json_blob.data) + json_blob.size)
+            reinterpret_cast<char const*>(json_blob.data()),
+            reinterpret_cast<char const*>(json_blob.data()) + json_blob.size())
         == converted_json);
 }
 
@@ -242,7 +242,6 @@ TEST_CASE("basic JSON encoding", "[encodings][json]")
         "2017-05-26T13:02:03.45Z");
 
     // Try a blob.
-    char blob_data[] = "some blob data";
     test_json_encoding(
         R"(
             {
@@ -250,7 +249,7 @@ TEST_CASE("basic JSON encoding", "[encodings][json]")
                 "type": "base64-encoded-blob"
             }
         )",
-        blob{ownership_holder(), blob_data, sizeof(blob_data) - 1});
+        make_string_literal_blob("some blob data"));
 
     // Try some other things that aren't blobs but look similar.
     test_json_encoding(

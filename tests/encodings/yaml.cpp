@@ -46,8 +46,8 @@ test_yaml_encoding(
     auto yaml_blob = value_to_yaml_blob(converted_value);
     REQUIRE(
         string(
-            reinterpret_cast<char const*>(yaml_blob.data),
-            reinterpret_cast<char const*>(yaml_blob.data) + yaml_blob.size)
+            reinterpret_cast<char const*>(yaml_blob.data()),
+            reinterpret_cast<char const*>(yaml_blob.data()) + yaml_blob.size())
         == converted_yaml);
 }
 
@@ -231,13 +231,12 @@ TEST_CASE("basic YAML encoding", "[encodings][yaml]")
         "2017-05-26T13:02:03.45Z");
 
     // Try a blob.
-    char blob_data[] = "some blob data";
     test_yaml_encoding(
         R"(
             type: base64-encoded-blob
             blob: c29tZSBibG9iIGRhdGE=
         )",
-        blob{ownership_holder(), blob_data, sizeof(blob_data) - 1});
+        make_string_literal_blob("some blob data"));
 
     // Try some other things that aren't blobs but look similar.
     test_yaml_encoding(
@@ -256,14 +255,10 @@ TEST_CASE("basic YAML encoding", "[encodings][yaml]")
 
 TEST_CASE("diagnostic YAML encoding", "[encodings][yaml]")
 {
-    char empty_blob_data[] = "";
-    auto empty_blob = blob{
-        ownership_holder(), empty_blob_data, sizeof(empty_blob_data) - 1};
+    auto empty_blob = make_string_literal_blob("");
     test_diagnostic_yaml_encoding(empty_blob, "\"<blob - size: 0 bytes>\"");
 
-    char small_blob_data[] = "small blob";
-    auto small_blob = blob{
-        ownership_holder(), small_blob_data, sizeof(small_blob_data) - 1};
+    auto small_blob = make_string_literal_blob("small blob");
     test_diagnostic_yaml_encoding(
         small_blob,
         R"( |
@@ -271,15 +266,11 @@ TEST_CASE("diagnostic YAML encoding", "[encodings][yaml]")
             small blob
         )");
 
-    auto large_blob = blob{ownership_holder(), 0, 16384};
+    auto large_blob = make_static_blob(nullptr, 16384);
     test_diagnostic_yaml_encoding(
         large_blob, "\"<blob - size: 16384 bytes>\"");
 
-    char unprintable_blob_data[] = "\xf1wxyz";
-    auto unprintable_blob = blob{
-        ownership_holder(),
-        unprintable_blob_data,
-        sizeof(unprintable_blob_data) - 1};
+    auto unprintable_blob = make_string_literal_blob("\xf1wxyz");
     test_diagnostic_yaml_encoding(
         unprintable_blob, "\"<blob - size: 5 bytes>\"");
 

@@ -59,8 +59,10 @@ TEST_CASE("lambda_call", "[external]")
     blob blob0 = cppcoro::sync_wait(
         cradle::external::get_iss_object(*session, context_id, calc_id0));
 
-    dynamic dynamic0 = parse_msgpack_value(
-        blob0, reinterpret_cast<const uint8_t*>(blob0.data), blob0.size);
+    // TODO pass blob's owner to parse_msgpack_value()
+    // TODO don't have so many reinterpret_cast's
+    auto blob0_data = reinterpret_cast<uint8_t const*>(blob0.data());
+    dynamic dynamic0 = parse_msgpack_value(blob0_data, blob0.size());
 
     REQUIRE(dynamic0.type() == value_type::INTEGER);
     REQUIRE(cast<integer>(dynamic0) == 42);

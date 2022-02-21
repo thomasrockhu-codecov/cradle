@@ -507,8 +507,9 @@ post_iss_object(
     blob msgpack_data)
 {
     std::string data_hash;
-    picosha2::hash256_hex_string(
-        msgpack_data.data, msgpack_data.data + msgpack_data.size, data_hash);
+    uint8_t const* data
+        = reinterpret_cast<uint8_t const*>(msgpack_data.data());
+    picosha2::hash256_hex_string(data, data + msgpack_data.size(), data_hash);
 
     auto cache_key = make_sha256_hashed_id(
         "post_iss_object",
