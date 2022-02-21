@@ -2,6 +2,8 @@
 #include <cradle/encodings/sha256_hash_id.h>
 #include <cradle/websocket/lambda_call.h>
 
+using namespace std::literals::string_literals;
+
 namespace cradle {
 
 cppcoro::task<blob>
@@ -30,14 +32,14 @@ do_lambda_call_cached(
     // Calculate the blob and store it in the cache where it can be retrieved
     // using immutable_id
     auto cache_key0 = make_sha256_hashed_id(
-        "retrieve_immutable_blob", session.api_url, immutable_id);
+        "retrieve_immutable_blob"s, session.api_url, immutable_id);
     auto ignored_blob = co_await fully_cached<blob>(
         service, cache_key0, [&] { return do_lambda_call_uncached(my_call); });
 
     // Store the object_id -> immutable_id translation in the cache
     const string object_id{immutable_id + "_obj"};
     auto cache_key1 = make_sha256_hashed_id(
-        "resolve_iss_object_to_immutable",
+        "resolve_iss_object_to_immutable"s,
         session.api_url,
         context_id,
         object_id);

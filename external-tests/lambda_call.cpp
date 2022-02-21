@@ -52,10 +52,6 @@ TEST_CASE("lambda_call", "[external]")
     auto calc_id0 = cppcoro::sync_wait(cradle::external::post_calculation(
         *session, context_id, my_calc_request));
 
-    // TODO Disk cache miss if not sleeping. Why? And why isn't it in the
-    // memory cache?
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
     blob blob0 = cppcoro::sync_wait(
         cradle::external::get_iss_object(*session, context_id, calc_id0));
 

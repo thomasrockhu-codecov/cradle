@@ -11,6 +11,8 @@
 #include <cradle/utilities/logging.h>
 #include <cradle/utilities/text.h>
 
+using namespace std::literals::string_literals;
+
 namespace cradle {
 
 namespace uncached {
@@ -79,7 +81,7 @@ resolve_iss_object_to_immutable(
     bool ignore_upgrades)
 {
     auto cache_key = make_sha256_hashed_id(
-        "resolve_iss_object_to_immutable",
+        "resolve_iss_object_to_immutable"s,
         session.api_url,
         ignore_upgrades ? "n/a" : context_id,
         object_id);
@@ -231,7 +233,7 @@ retrieve_immutable_blob(
     //     << CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(immutable_id));
 
     auto cache_key = make_sha256_hashed_id(
-        "retrieve_immutable_blob", session.api_url, immutable_id);
+        "retrieve_immutable_blob"s, session.api_url, immutable_id);
 
     return fully_cached<blob>(service, cache_key, [=, &service] {
         return uncached::retrieve_immutable_blob(
