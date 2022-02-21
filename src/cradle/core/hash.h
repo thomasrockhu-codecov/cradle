@@ -14,6 +14,13 @@ invoke_hash(T const& x)
     return boost::hash<T>()(x);
 }
 
+template<>
+inline std::size_t
+invoke_hash(char const* const& x)
+{
+    return boost::hash<std::string>()(std::string(x));
+}
+
 template<class... Hashes>
 size_t
 combine_hashes(Hashes... hashes)
