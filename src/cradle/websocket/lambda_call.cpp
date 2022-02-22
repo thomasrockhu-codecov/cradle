@@ -33,7 +33,7 @@ do_lambda_call_cached(
     // using immutable_id
     auto cache_key0 = make_sha256_hashed_id(
         "retrieve_immutable_blob"s, session.api_url, immutable_id);
-    auto ignored_blob = co_await fully_cached<blob>(
+    auto ignored_blob = co_await cached<blob>(
         service, cache_key0, [&] { return do_lambda_call_uncached(my_call); });
 
     // Store the object_id -> immutable_id translation in the cache
@@ -43,11 +43,10 @@ do_lambda_call_cached(
         session.api_url,
         context_id,
         object_id);
-    // Replacing [&] with [=] leads to double free; why?
-    auto ignored_object_id
-        = co_await fully_cached<string>(service, cache_key1, [&] {
-              return get_immutable_id_uncached(immutable_id);
-          });
+    // TODO Replacing [&] with [=] leads to double free; why?
+    auto ignored_object_id = co_await cached<string>(service, cache_key1, [&] {
+        return get_immutable_id_uncached(immutable_id);
+    });
 
     co_return object_id;
 }
