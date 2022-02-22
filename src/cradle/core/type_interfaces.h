@@ -1,6 +1,7 @@
 #ifndef CRADLE_CORE_TYPE_INTERFACES_HPP
 #define CRADLE_CORE_TYPE_INTERFACES_HPP
 
+#include <functional>
 #include <map>
 #include <vector>
 
@@ -630,24 +631,79 @@ typedef dynamic(lambda_function)(cradle::dynamic_array const& args);
 
 struct lambda_wrapper
 {
-    lambda_wrapper() : func_{nullptr}
+ private:
+    struct impl_base
+    {
+        virtual ~impl_base() = default;
+        virtual dynamic
+        operator()(dynamic_array const& args) const = 0;
+    };
+
+    class impl_for_function : public impl_base
+    {
+        lambda_function* func_;
+
+     public:
+        impl_for_function(lambda_function* func) : func_(func)
+        {
+        }
+        dynamic
+        operator()(dynamic_array const& args) const
+        {
+            return func_(args);
+        }
+    };
+
+    template<typename T>
+    class impl_for_lambda : public impl_base
+    {
+        const T* lambda_;
+
+     public:
+        impl_for_lambda(const T* lambda) : lambda_(lambda)
+        {
+        }
+        dynamic
+        operator()(dynamic_array const& args) const
+        {
+            return lambda_->operator()(args);
+        }
+    };
+
+    // Cannot put a unique_ptr in an api struct
+    std::shared_ptr<impl_base> impl_;
+    const void* ptr_;
+
+ public:
+    lambda_wrapper() : impl_{nullptr}, ptr_{nullptr}
     {
     }
 
-    lambda_wrapper(lambda_function* func) : func_{func}
+    lambda_wrapper(lambda_function* func)
+        : impl_(
+            std::shared_ptr<impl_for_function>(new impl_for_function(func))),
+          ptr_(reinterpret_cast<void*>(func))
+    {
+    }
+
+    template<typename T>
+    lambda_wrapper(const T& lambda)
+        : impl_(std::shared_ptr<impl_for_lambda<T>>(
+            new impl_for_lambda<T>(&lambda))),
+          ptr_(&lambda)
     {
     }
 
     dynamic
-    operator()(cradle::dynamic_array const& args) const
+    operator()(dynamic_array const& args) const
     {
-        return func_(args);
+        return impl_->operator()(args);
     }
 
     friend bool
     operator==(lambda_wrapper const& a, lambda_wrapper const& b)
     {
-        return a.func_ == b.func_;
+        return a.ptr_ == b.ptr_;
     }
 
     friend bool
@@ -659,17 +715,14 @@ struct lambda_wrapper
     friend bool
     operator<(lambda_wrapper const& a, lambda_wrapper const& b)
     {
-        return a.func_ < b.func_;
+        return a.ptr_ < b.ptr_;
     }
 
     friend size_t
     hash_value(lambda_wrapper const& value)
     {
-        return cradle::invoke_hash(value.func_);
+        return cradle::invoke_hash(value.ptr_);
     }
-
- private:
-    lambda_function* func_;
 };
 
 template<>
