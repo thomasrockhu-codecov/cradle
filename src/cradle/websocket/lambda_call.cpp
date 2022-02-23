@@ -43,10 +43,12 @@ do_lambda_call_cached(
         session.api_url,
         context_id,
         object_id);
-    // TODO Replacing [&] with [=] leads to double free; why?
-    auto ignored_object_id = co_await cached<string>(service, cache_key1, [&] {
-        return get_immutable_id_uncached(immutable_id);
-    });
+    // #170 Putting local_lambda inside the co_await leads to a double free,
+    // probably due to a compiler bug.
+    auto local_lambda
+        = [=] { return get_immutable_id_uncached(immutable_id); };
+    auto ignored_object_id
+        = co_await cached<string>(service, cache_key1, local_lambda);
 
     co_return object_id;
 }
