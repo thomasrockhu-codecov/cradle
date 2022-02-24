@@ -227,7 +227,7 @@ perform_local_calc(
                 session,
                 context_id,
                 extended_environment,
-                as_let(request).in);
+                std::move(let.in));
         }
         case calculation_request_tag::VARIABLE:
             co_return environment.at(as_variable(request));
@@ -261,5 +261,19 @@ perform_local_calc(
     co_return co_await perform_local_calc(
         service, session, context_id, {}, std::move(request));
 }
+
+cppcoro::task<dynamic>
+resolve_hybrid_calc_to_value(
+    service_core& service,
+    thinknode_session const& session,
+    string const& context_id,
+    calculation_request request);
+
+cppcoro::task<std::string>
+resolve_hybrid_calc_to_iss_object(
+    service_core& service,
+    thinknode_session const& session,
+    string const& context_id,
+    calculation_request request);
 
 } // namespace cradle
