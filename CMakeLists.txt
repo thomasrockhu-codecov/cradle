@@ -308,15 +308,13 @@ add_custom_command(TARGET server POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:server> ${deploy_dir})
 
 # Add the unit test runner.
-file(GLOB_RECURSE UNIT_TEST_FILES CONFIGURE_DEPENDS "tests/*.cpp")
+file(GLOB_RECURSE UNIT_TEST_FILES CONFIGURE_DEPENDS "tests/unit/*.cpp")
 add_executable(unit_test_runner ${UNIT_TEST_FILES})
 target_link_libraries(unit_test_runner cradle)
-target_include_directories(unit_test_runner
-    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/unit_tests)
 # Don't use precompiled headers for the test runner since it needs to include
 # Catch specially.
 set_source_files_properties(
-    tests/runner.cpp
+    tests/unit/runner.cpp
     PROPERTIES
         SKIP_PRECOMPILE_HEADERS ON)
 
