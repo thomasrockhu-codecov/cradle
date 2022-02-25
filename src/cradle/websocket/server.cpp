@@ -1,5 +1,6 @@
 #include <cradle/io/asio.h>
 
+#include <cradle/websocket/server_api.h>
 #include <cradle/websocket/server.h>
 
 #include <set>
@@ -233,7 +234,7 @@ get_iss_object(
     thinknode_session session,
     string context_id,
     string object_id,
-    bool ignore_upgrades = false)
+    bool ignore_upgrades)
 {
     CRADLE_LOG_CALL(
         << CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(object_id)
