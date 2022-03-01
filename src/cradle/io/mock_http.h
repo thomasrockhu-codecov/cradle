@@ -2,6 +2,7 @@
 #define CRADLE_IO_MOCK_HTTP_H
 
 #include <cradle/io/http_requests.hpp>
+#include <mutex>
 
 namespace cradle {
 
@@ -39,6 +40,7 @@ struct mock_http_session
  private:
     friend struct mock_http_connection;
 
+    std::mutex mutex_;
     mock_http_script script_;
 
     // Has the script been executed in order so far?

@@ -33,7 +33,8 @@ retrieve_immutable(
     string context_id,
     string immutable_id);
 
-// Retrieve an immutable object as a raw blob of data (in MessagePack format).
+// Retrieve an immutable object as a raw blob of data (e.g. in MessagePack
+// format).
 cppcoro::shared_task<blob>
 retrieve_immutable_blob(
     service_core& service,
@@ -59,15 +60,15 @@ post_iss_object(
     thinknode_type_info schema,
     dynamic data);
 
-// Post an ISS object and return its ID.
-// This form takes the object already encoded in msgpack.
+// Post an ISS object from a raw blob of data (e.g. encoded in MessagePack
+// format), and return its ID.
 cppcoro::shared_task<string>
 post_iss_object(
     service_core& service,
     thinknode_session session,
     string context_id,
     thinknode_type_info schema,
-    blob msgpack_data);
+    blob object_data);
 
 // Shallowly copy an ISS object from one bucket to another.
 cppcoro::task<nil_t>
