@@ -42,20 +42,50 @@ struct api_service_config
     std::optional<int> http_concurrency;
 };
 
+class api_service_impl;
+class api_service
+{
+    std::unique_ptr<api_service_impl> pimpl_;
+
+ public:
+    api_service(api_service_config const& config);
+    api_service(api_service&& that);
+    ~api_service();
+    api_service_impl&
+    impl()
+    {
+        return *pimpl_;
+    }
+};
+
+// The service will be stopped when the returned object goes out of scope.
+api_service
+start_service(api_service_config const& config);
+
 struct api_thinknode_session_config
 {
     std::string api_url;
     std::string access_token;
 };
 
-class api_service;
-class api_session;
+class api_session_impl;
+class api_session
+{
+    std::unique_ptr<api_session_impl> pimpl_;
 
-// The service will be stopped when the unique_ptr goes out of scope.
-std::unique_ptr<api_service>
-start_service(api_service_config const& config);
+ public:
+    api_session(
+        api_service& service, api_thinknode_session_config const& config);
+    api_session(api_session&& that);
+    ~api_session();
+    api_session_impl&
+    impl()
+    {
+        return *pimpl_;
+    }
+};
 
-std::unique_ptr<api_session>
+api_session
 start_session(
     api_service& service, api_thinknode_session_config const& config);
 
@@ -109,7 +139,5 @@ retrieve_calculation_request(
 } // namespace external
 
 } // namespace cradle
-
-#include <cradle/external/external_api_impl.h>
 
 #endif

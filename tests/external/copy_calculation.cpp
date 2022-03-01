@@ -12,7 +12,7 @@ TEST_CASE("copy_calculation", "[external]")
 {
     const std::string source_context_id{"123"};
     const std::string destination_context_id{"456"};
-    external_test_session test_session;
+    auto test_session = make_external_test_session();
     auto& api_session = test_session.api_session();
     auto& mock_http = test_session.enable_http_mocking();
     mock_http.set_script(

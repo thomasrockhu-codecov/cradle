@@ -7,20 +7,25 @@
 
 class external_test_session
 {
-    std::unique_ptr<cradle::external::api_service> service_;
-    std::unique_ptr<cradle::external::api_session> session_;
+    cradle::external::api_service service_;
+    cradle::external::api_session session_;
 
  public:
-    external_test_session();
+    external_test_session(
+        cradle::external::api_service&& service,
+        cradle::external::api_session&& session);
 
     cradle::external::api_session&
     api_session()
     {
-        return *session_;
+        return session_;
     }
 
     cradle::mock_http_session&
     enable_http_mocking();
 };
+
+external_test_session
+make_external_test_session();
 
 #endif

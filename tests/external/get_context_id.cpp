@@ -10,7 +10,7 @@ using namespace cradle;
 
 TEST_CASE("get_context_id", "[external]")
 {
-    external_test_session test_session;
+    auto test_session = make_external_test_session();
     auto& api_session = test_session.api_session();
     auto& mock_http = test_session.enable_http_mocking();
     mock_http.set_script(

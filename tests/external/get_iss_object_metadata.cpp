@@ -14,7 +14,7 @@ TEST_CASE("get_iss_object_metadata", "[external]")
     auto metadata = std::map<string, string>(
         {{"Access-Control-Allow-Origin", "*"},
          {"Cache-Control", "max-age=60"}});
-    external_test_session test_session;
+    auto test_session = make_external_test_session();
     auto& api_session = test_session.api_session();
     auto& mock_http = test_session.enable_http_mocking();
     mock_http.set_script(

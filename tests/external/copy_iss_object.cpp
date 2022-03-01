@@ -16,7 +16,7 @@ TEST_CASE("copy_iss_object", "[external]")
         {{"Access-Control-Allow-Origin", "*"},
          {"Cache-Control", "max-age=60"},
          {"Thinknode-Type", "string"}});
-    external_test_session test_session;
+    auto test_session = make_external_test_session();
     auto& api_session = test_session.api_session();
     auto& mock_http = test_session.enable_http_mocking();
     mock_http.set_script(

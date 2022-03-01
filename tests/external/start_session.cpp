@@ -12,11 +12,5 @@ TEST_CASE("start_session", "[external]")
         .api_url = "https://mgh.thinknode.io/api/v1.0",
         .access_token = "xyz",
     };
-    auto session = cradle::external::start_session(*service, session_config);
-
-    REQUIRE(session);
-
-    auto& tn_session = session->get_thinknode_session();
-    REQUIRE(tn_session.api_url == "https://mgh.thinknode.io/api/v1.0");
-    REQUIRE(tn_session.access_token == "xyz");
+    REQUIRE_NOTHROW(cradle::external::start_session(service, session_config));
 }

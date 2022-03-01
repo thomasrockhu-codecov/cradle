@@ -11,7 +11,7 @@ TEST_CASE("post_iss_object", "[external]")
 {
     const std::string context_id{"123"};
     const blob my_blob{make_blob("my_blob_value")};
-    external_test_session test_session;
+    auto test_session = make_external_test_session();
     auto& api_session = test_session.api_session();
     auto& mock_http = test_session.enable_http_mocking();
     mock_http.set_script(

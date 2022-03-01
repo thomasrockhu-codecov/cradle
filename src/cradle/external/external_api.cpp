@@ -1,3 +1,4 @@
+#include <cradle/external/external_api_impl.h>
 #include <cradle/external_api.h>
 #include <cradle/thinknode/calc.h>
 #include <cradle/thinknode/iam.h>
@@ -8,10 +9,23 @@ namespace cradle {
 
 namespace external {
 
-std::unique_ptr<api_service>
+api_service::api_service(api_service_config const& config)
+    : pimpl_{std::make_unique<api_service_impl>(config)}
+{
+}
+
+api_service::api_service(api_service&& that) : pimpl_{std::move(that.pimpl_)}
+{
+}
+
+api_service::~api_service()
+{
+}
+
+api_service
 start_service(api_service_config const& config)
 {
-    return std::make_unique<api_service>(config);
+    return api_service(config);
 }
 
 cradle::service_config
@@ -45,19 +59,39 @@ make_service_config(api_service_config const& config)
     return result;
 }
 
-api_service::api_service(api_service_config const& config)
+api_service_impl::api_service_impl(api_service_config const& config)
     : service_core_{make_service_config(config)}
 {
 }
 
-std::unique_ptr<api_session>
-start_session(api_service& service, api_thinknode_session_config const& config)
-{
-    return std::make_unique<api_session>(service, config);
-}
-
 api_session::api_session(
     api_service& service, api_thinknode_session_config const& config)
+    : pimpl_{std::make_unique<api_session_impl>(service.impl(), config)}
+{
+}
+
+api_session::api_session(api_session&& that) : pimpl_{std::move(that.pimpl_)}
+{
+}
+
+api_session::~api_session()
+{
+}
+
+cradle::service_core&
+get_service_core(api_session& session)
+{
+    return session.impl().get_service_core();
+}
+
+api_session
+start_session(api_service& service, api_thinknode_session_config const& config)
+{
+    return api_session(service, config);
+}
+
+api_session_impl::api_session_impl(
+    api_service_impl& service, api_thinknode_session_config const& config)
     : service_{service},
       thinknode_session_{
           cradle::make_thinknode_session(config.api_url, config.access_token)}
@@ -68,8 +102,8 @@ cppcoro::task<std::string>
 get_context_id(api_session& session, std::string realm)
 {
     return cradle::get_context_id(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(realm));
 }
 
@@ -81,8 +115,8 @@ get_iss_object(
     bool ignore_upgrades)
 {
     return cradle::get_iss_blob(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(context_id),
         std::move(object_id),
         ignore_upgrades);
@@ -96,8 +130,8 @@ resolve_iss_object_to_immutable(
     bool ignore_upgrades)
 {
     return cradle::resolve_iss_object_to_immutable(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(context_id),
         std::move(object_id),
         ignore_upgrades);
@@ -108,8 +142,8 @@ get_iss_object_metadata(
     api_session& session, std::string context_id, std::string object_id)
 {
     return cradle::get_iss_object_metadata(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(context_id),
         std::move(object_id));
 }
@@ -122,8 +156,8 @@ post_iss_object(
     blob object_data)
 {
     return cradle::post_iss_object(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(context_id),
         std::move(cradle::parse_url_type_string(schema)),
         object_data);
@@ -137,12 +171,12 @@ copy_iss_object(
     std::string object_id)
 {
     auto source_bucket = co_await cradle::get_context_bucket(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         source_context_id);
     co_await cradle::deeply_copy_iss_object(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(source_bucket),
         std::move(source_context_id),
         std::move(destination_context_id),
@@ -157,12 +191,12 @@ copy_calculation(
     std::string calculation_id)
 {
     auto source_bucket = co_await cradle::get_context_bucket(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         source_context_id);
     co_await cradle::deeply_copy_calculation(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(source_bucket),
         std::move(source_context_id),
         std::move(destination_context_id),
@@ -174,8 +208,8 @@ retrieve_calculation_request(
     api_session& session, std::string context_id, std::string calculation_id)
 {
     return cradle::retrieve_calculation_request(
-        session.get_service_core(),
-        session.get_thinknode_session(),
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
         std::move(context_id),
         std::move(calculation_id));
 }
