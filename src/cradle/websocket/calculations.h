@@ -28,7 +28,7 @@ template<class Function>
 auto
 make_function_id(Function f)
 {
-    return make_id(static_cast<Function*>(nullptr));
+    return make_id(typeid(f).name());
 }
 
 template<class Function>
