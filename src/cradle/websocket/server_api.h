@@ -17,6 +17,14 @@ get_iss_object(
     string object_id,
     bool ignore_upgrades = false);
 
+cppcoro::shared_task<blob>
+get_iss_blob(
+    service_core& service,
+    thinknode_session session,
+    string context_id,
+    string object_id,
+    bool ignore_upgrades = false);
+
 cppcoro::shared_task<api_type_info>
 resolve_named_type_reference(
     service_core& service,
@@ -31,6 +39,24 @@ resolve_context_app(
     string context_id,
     string account,
     string app);
+
+cppcoro::task<nil_t>
+deeply_copy_iss_object(
+    service_core& service,
+    thinknode_session session,
+    string source_bucket,
+    string source_context_id,
+    string destination_context_id,
+    string object_id);
+
+cppcoro::task<nil_t>
+deeply_copy_calculation(
+    service_core& service,
+    thinknode_session session,
+    string source_bucket,
+    string source_context_id,
+    string destination_context_id,
+    string object_id);
 
 } // namespace cradle
 

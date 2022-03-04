@@ -253,7 +253,7 @@ get_iss_blob(
     thinknode_session session,
     string context_id,
     string object_id,
-    bool ignore_upgrades = false)
+    bool ignore_upgrades)
 {
     CRADLE_LOG_CALL(
         << CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(object_id)
@@ -1751,12 +1751,10 @@ process_message(websocket_server_impl& server, client_request request)
         }
         case client_message_content_tag::COPY_ISS_OBJECT: {
             auto const& cio = as_copy_iss_object(content);
-            auto source_bucket
-                = (co_await get_context_contents(
-                       server.core,
-                       get_client(server.clients, request.client).session,
-                       cio.source_context_id))
-                      .bucket;
+            auto source_bucket = co_await get_context_bucket(
+                server.core,
+                get_client(server.clients, request.client).session,
+                cio.source_context_id);
             co_await deeply_copy_iss_object(
                 server.core,
                 get_client(server.clients, request.client).session,
@@ -1773,12 +1771,10 @@ process_message(websocket_server_impl& server, client_request request)
         }
         case client_message_content_tag::COPY_CALCULATION: {
             auto const& cc = as_copy_calculation(content);
-            auto source_bucket
-                = (co_await get_context_contents(
-                       server.core,
-                       get_client(server.clients, request.client).session,
-                       cc.source_context_id))
-                      .bucket;
+            auto source_bucket = co_await get_context_bucket(
+                server.core,
+                get_client(server.clients, request.client).session,
+                cc.source_context_id);
             co_await deeply_copy_calculation(
                 server.core,
                 get_client(server.clients, request.client).session,

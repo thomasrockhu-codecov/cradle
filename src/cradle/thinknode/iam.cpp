@@ -25,6 +25,19 @@ get_context_contents(
 
 } // namespace uncached
 
+cppcoro::task<string>
+get_context_id(service_core& service, thinknode_session session, string realm)
+{
+    auto query = make_get_request(
+        session.api_url + "/iam/realms/" + realm + "/context",
+        {{"Authorization", "Bearer " + session.access_token},
+         {"Accept", "application/json"}});
+
+    auto response = co_await async_http_request(service, query);
+
+    co_return from_dynamic<id_response>(parse_json_response(response)).id;
+}
+
 cppcoro::shared_task<thinknode_context_contents>
 get_context_contents(
     service_core& service, thinknode_session session, string context_id)
@@ -37,6 +50,15 @@ get_context_contents(
             return uncached::get_context_contents(
                 service, session, context_id);
         });
+}
+
+cppcoro::shared_task<string>
+get_context_bucket(
+    service_core& service, thinknode_session session, string context_id)
+{
+    auto context = co_await get_context_contents(
+        service, session, std::move(context_id));
+    co_return context.bucket;
 }
 
 } // namespace cradle

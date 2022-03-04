@@ -293,6 +293,7 @@ target_link_libraries(cradle PUBLIC
 target_compile_definitions(
     cradle PUBLIC ${CONAN_DEFINES} ${CONAN_COMPILE_DEFINITIONS})
 target_include_directories(cradle PUBLIC
+    include
     ${generated_include_dir}/src
     src
     src/third-party)
@@ -375,6 +376,28 @@ else()
             --build ${CMAKE_BINARY_DIR}
             --target unit_tests)
 endif()
+
+# Add the external test runner.
+file(GLOB_RECURSE EXTERNAL_TEST_FILES CONFIGURE_DEPENDS "tests/external/*.cpp")
+add_executable(external_test_runner ${EXTERNAL_TEST_FILES})
+target_link_libraries(external_test_runner cradle)
+# Don't use precompiled headers for the test runner since it needs to include
+# Catch specially.
+set_source_files_properties(
+    tests/external/runner.cpp
+    PROPERTIES
+        SKIP_PRECOMPILE_HEADERS ON)
+
+# Add the external testing target.
+add_custom_target(
+    external_tests
+    COMMAND $<TARGET_FILE:external_test_runner>
+    DEPENDS external_test_runner)
+add_test(
+    NAME external_tests
+    COMMAND ${CMAKE_COMMAND}
+        --build ${CMAKE_BINARY_DIR}
+        --target external_tests)
 
 # Add the integration testing target.
 add_custom_target(
