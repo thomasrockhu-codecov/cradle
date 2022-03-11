@@ -2,6 +2,7 @@
 #define CRADLE_WEBSOCKET_HYBRID_CALCS_H
 
 #include <cradle/service/core.h>
+#include <cradle/websocket/lambda_calcs.h>
 #include <cradle/websocket/types.hpp>
 
 namespace cradle {
