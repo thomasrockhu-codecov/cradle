@@ -6,30 +6,30 @@
 namespace cradle {
 
 struct lambda_calculation;
-struct hybrid_function_application;
-struct hybrid_array_request;
-struct hybrid_item_request;
-struct hybrid_object_request;
-struct hybrid_property_request;
-struct hybrid_let_request;
-struct hybrid_meta_request;
-struct hybrid_cast_request;
+struct function_application;
+struct array_calc_request;
+struct item_calc_request;
+struct object_calc_request;
+struct property_calc_request;
+struct let_calc_request;
+struct meta_calc_request;
+struct cast_calc_request;
 
 api(union)
-union hybrid_calculation_request
+union calculation_request
 {
     std::string reference;
     dynamic value;
     lambda_calculation lambda;
-    hybrid_function_application function;
-    hybrid_array_request array;
-    hybrid_item_request item;
-    hybrid_object_request object;
-    hybrid_property_request property;
-    hybrid_let_request let;
+    function_application function;
+    array_calc_request array;
+    item_calc_request item;
+    object_calc_request object;
+    property_calc_request property;
+    let_calc_request let;
     std::string variable;
-    hybrid_meta_request meta;
-    hybrid_cast_request cast;
+    meta_calc_request meta;
+    cast_calc_request cast;
 };
 
 // TODO: Maybe come up with a better name for this.
@@ -42,14 +42,14 @@ enum class execution_host_selection
 };
 
 api(struct)
-struct hybrid_function_application
+struct function_application
 {
     std::string account;
     std::string app;
     std::string name;
     execution_host_selection host;
     omissible<cradle::integer> level;
-    std::vector<hybrid_calculation_request> args;
+    std::vector<calculation_request> args;
 };
 
 struct lambda_function
@@ -101,58 +101,58 @@ api(struct)
 struct lambda_calculation
 {
     lambda_function function;
-    std::vector<hybrid_calculation_request> args;
+    std::vector<calculation_request> args;
 };
 
 api(struct)
-struct hybrid_array_request
+struct array_calc_request
 {
-    std::vector<hybrid_calculation_request> items;
+    std::vector<calculation_request> items;
     cradle::thinknode_type_info item_schema;
 };
 
 api(struct)
-struct hybrid_object_request
+struct object_calc_request
 {
-    std::map<std::string, hybrid_calculation_request> properties;
+    std::map<std::string, calculation_request> properties;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct hybrid_item_request
+struct item_calc_request
 {
-    hybrid_calculation_request array;
-    hybrid_calculation_request index;
+    calculation_request array;
+    calculation_request index;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct hybrid_property_request
+struct property_calc_request
 {
-    hybrid_calculation_request object;
-    hybrid_calculation_request field;
+    calculation_request object;
+    calculation_request field;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct hybrid_meta_request
+struct meta_calc_request
 {
-    hybrid_calculation_request generator;
+    calculation_request generator;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct hybrid_cast_request
+struct cast_calc_request
 {
     cradle::thinknode_type_info schema;
-    hybrid_calculation_request object;
+    calculation_request object;
 };
 
 api(struct)
-struct hybrid_let_request
+struct let_calc_request
 {
-    std::map<std::string, hybrid_calculation_request> variables;
-    hybrid_calculation_request in;
+    std::map<std::string, calculation_request> variables;
+    calculation_request in;
 };
 
 } // namespace cradle

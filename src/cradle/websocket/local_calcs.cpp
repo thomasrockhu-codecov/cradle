@@ -237,14 +237,14 @@ perform_local_calc(
 }
 
 cppcoro::task<dynamic>
-resolve_hybrid_calc_to_value(
+resolve_calc_to_value(
     service_core& service,
     thinknode_session const& session,
     string const& context_id,
     thinknode_calc_request request);
 
 cppcoro::task<std::string>
-resolve_hybrid_calc_to_iss_object(
+resolve_calc_to_iss_object(
     service_core& service,
     thinknode_session const& session,
     string const& context_id,

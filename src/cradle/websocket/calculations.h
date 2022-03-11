@@ -1,7 +1,7 @@
-#ifndef CRADLE_WEBSOCKET_LAMBDA_CALCS_H
-#define CRADLE_WEBSOCKET_LAMBDA_CALCS_H
+#ifndef CRADLE_WEBSOCKET_CALCULATIONS_H
+#define CRADLE_WEBSOCKET_CALCULATIONS_H
 
-#include <cradle/core/id.h>
+#include <cradle/service/core.h>
 #include <cradle/websocket/types.hpp>
 
 namespace cradle {
@@ -40,6 +40,20 @@ make_function(Function&& function)
     f.object = std::forward<Function>(function);
     return f;
 }
+
+cppcoro::task<dynamic>
+resolve_calc_to_value(
+    service_core& service,
+    thinknode_session const& session,
+    string const& context_id,
+    calculation_request request);
+
+cppcoro::task<std::string>
+resolve_calc_to_iss_object(
+    service_core& service,
+    thinknode_session const& session,
+    string const& context_id,
+    calculation_request request);
 
 } // namespace cradle
 

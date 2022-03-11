@@ -1,4 +1,4 @@
-#include <cradle/websocket/lambda_calcs.h>
+#include <cradle/websocket/calculations.h>
 
 #include <cradle/utilities/testing.h>
 
@@ -20,7 +20,7 @@ subtract(int x, int y)
 
 } // namespace
 
-TEST_CASE("function IDs", "[lambda_calcs]")
+TEST_CASE("function IDs", "[calcs][ws]")
 {
     auto lambda_add = [](int x, int y) { return x + y; };
     auto lambda_subtract = [](int x, int y) { return x - y; };
