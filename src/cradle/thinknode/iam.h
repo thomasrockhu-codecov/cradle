@@ -6,9 +6,16 @@
 
 namespace cradle {
 
+cppcoro::task<string>
+get_context_id(service_core& service, thinknode_session session, string realm);
+
 // Query the contents of a context.
 cppcoro::shared_task<thinknode_context_contents>
 get_context_contents(
+    service_core& service, thinknode_session session, string context_id);
+
+cppcoro::shared_task<string>
+get_context_bucket(
     service_core& service, thinknode_session session, string context_id);
 
 } // namespace cradle

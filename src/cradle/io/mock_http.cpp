@@ -31,6 +31,8 @@ mock_http_connection::perform_request(
     progress_reporter_interface&,
     http_request const& request)
 {
+    // These calls may arrive from different threads.
+    std::scoped_lock<std::mutex> lock(session_.mutex_);
     auto exchange
         = std::ranges::find_if(session_.script_, [&](auto const& exchange) {
               return exchange.request == request;

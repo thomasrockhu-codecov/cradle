@@ -480,7 +480,7 @@ post_iss_object(
     thinknode_session session,
     string context_id,
     thinknode_type_info schema,
-    blob msgpack_data)
+    blob object_data)
 {
     auto query = make_http_request(
         http_request_method::POST,
@@ -489,7 +489,7 @@ post_iss_object(
         {{"Authorization", "Bearer " + session.access_token},
          {"Accept", "application/json"},
          {"Content-Type", "application/octet-stream"}},
-        msgpack_data);
+        object_data);
 
     auto response = co_await async_http_request(service, query);
 
@@ -504,12 +504,11 @@ post_iss_object(
     thinknode_session session,
     string context_id,
     thinknode_type_info schema,
-    blob msgpack_data)
+    blob object_data)
 {
     std::string data_hash;
-    uint8_t const* data
-        = reinterpret_cast<uint8_t const*>(msgpack_data.data());
-    picosha2::hash256_hex_string(data, data + msgpack_data.size(), data_hash);
+    uint8_t const* data = reinterpret_cast<uint8_t const*>(object_data.data());
+    picosha2::hash256_hex_string(data, data + object_data.size(), data_hash);
 
     auto cache_key = make_sha256_hashed_id(
         "post_iss_object",
@@ -520,7 +519,7 @@ post_iss_object(
 
     return fully_cached<string>(service, cache_key, [=, &service] {
         return uncached::post_iss_object(
-            service, session, context_id, schema, msgpack_data);
+            service, session, context_id, schema, object_data);
     });
 }
 
