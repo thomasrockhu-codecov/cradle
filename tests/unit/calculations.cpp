@@ -144,6 +144,7 @@ TEST_CASE("individual calcs", "[calcs][ws]")
                {"prefix", ""},
                {"suffix", ""}}}}));
 
+#ifdef LOCAL_DOCKER_TESTING
     // function
     REQUIRE(
         eval(make_calculation_request_with_function(make_function_application(
@@ -155,6 +156,7 @@ TEST_CASE("individual calcs", "[calcs][ws]")
             {make_calculation_request_with_value(dynamic(2.0)),
              make_calculation_request_with_value(dynamic(0.125))})))
         == dynamic(2.125));
+#endif
 
     // lambda w/ actual lambda
     REQUIRE(
@@ -276,6 +278,7 @@ TEST_CASE("mixed calcs", "[calcs][ws]")
             core, session, "5dadeb4a004073e81b5e096255e83652", request));
     };
 
+#ifdef LOCAL_DOCKER_TESTING
     auto local_calc
         = make_calculation_request_with_function(make_function_application(
             "mgh",
@@ -285,6 +288,9 @@ TEST_CASE("mixed calcs", "[calcs][ws]")
             none,
             {make_calculation_request_with_value(dynamic(1.0)),
              make_calculation_request_with_value(dynamic(2.0))}));
+#else
+    auto local_calc = make_calculation_request_with_value(dynamic(3.0));
+#endif
 
     auto remote_calc
         = make_calculation_request_with_function(make_function_application(
