@@ -1,7 +1,7 @@
 #include <cradle/io/asio.h>
 
-#include <cradle/websocket/server_api.h>
 #include <cradle/websocket/server.h>
+#include <cradle/websocket/server_api.h>
 
 #include <set>
 #include <thread>
@@ -781,61 +781,61 @@ visit_calc_references(
     service_core& service,
     thinknode_session const& session,
     string const& context_id,
-    calculation_request const& request,
+    thinknode_calc_request const& request,
     function_view<cppcoro::task<nil_t>(string const& ref)> const& visitor)
 {
     auto recurse
-        = [&](calculation_request const& request) -> cppcoro::task<nil_t> {
+        = [&](thinknode_calc_request const& request) -> cppcoro::task<nil_t> {
         return visit_calc_references(
             service, session, context_id, request, visitor);
     };
 
     switch (get_tag(request))
     {
-        case calculation_request_tag::REFERENCE:
+        case thinknode_calc_request_tag::REFERENCE:
             co_await visitor(as_reference(request));
             break;
-        case calculation_request_tag::VALUE:
+        case thinknode_calc_request_tag::VALUE:
             break;
-        case calculation_request_tag::FUNCTION: {
+        case thinknode_calc_request_tag::FUNCTION: {
             std::vector<cppcoro::task<nil_t>> subtasks;
             for (auto const& arg : as_function(request).args)
                 subtasks.push_back(recurse(arg));
             co_await cppcoro::when_all_ready(std::move(subtasks));
             break;
         }
-        case calculation_request_tag::ARRAY: {
+        case thinknode_calc_request_tag::ARRAY: {
             std::vector<cppcoro::task<nil_t>> subtasks;
             for (auto const& item : as_array(request).items)
                 subtasks.push_back(recurse(item));
             co_await cppcoro::when_all_ready(std::move(subtasks));
             break;
         }
-        case calculation_request_tag::ITEM:
+        case thinknode_calc_request_tag::ITEM:
             co_await cppcoro::when_all_ready(
                 recurse(as_item(request).array),
                 recurse(as_item(request).index));
             break;
-        case calculation_request_tag::OBJECT: {
+        case thinknode_calc_request_tag::OBJECT: {
             std::vector<cppcoro::task<nil_t>> subtasks;
             for (auto const& item : as_object(request).properties)
                 subtasks.push_back(recurse(item.second));
             co_await cppcoro::when_all_ready(std::move(subtasks));
             break;
         }
-        case calculation_request_tag::PROPERTY: {
+        case thinknode_calc_request_tag::PROPERTY: {
             co_await cppcoro::when_all_ready(
                 recurse(as_property(request).object),
                 recurse(as_property(request).field));
             break;
         }
-        case calculation_request_tag::CAST:
+        case thinknode_calc_request_tag::CAST:
             co_await recurse(as_cast(request).object);
             break;
         default:
             CRADLE_THROW(
                 invalid_enum_value()
-                << enum_id_info("calculation_request_tag")
+                << enum_id_info("thinknode_calc_request_tag")
                 << enum_value_info(static_cast<int>(get_tag(request))));
     }
 
@@ -870,7 +870,7 @@ deeply_copy_calculation(
 
     if (get_thinknode_service_id(object_id) == thinknode_service_id::CALC)
     {
-        calculation_request calculation;
+        thinknode_calc_request calculation;
         bool found_at_destination = false;
         // We need to get the calculation request anyway (to recursively
         // process its references), so try retrieving it via the destination
@@ -968,29 +968,29 @@ deeply_copy_calculation(
 
 namespace detail {
 
-cppcoro::task<calculation_request>
+cppcoro::task<thinknode_calc_request>
 post_calculation_piecewise(
     service_core& core,
     thinknode_session session,
     string context_id,
-    calculation_request request)
+    thinknode_calc_request request)
 {
-    auto recurse
-        = [&](calculation_request calc) -> cppcoro::task<calculation_request> {
+    auto recurse = [&](thinknode_calc_request calc)
+        -> cppcoro::task<thinknode_calc_request> {
         return post_calculation_piecewise(
             core, session, context_id, std::move(calc));
     };
 
-    calculation_request shallow_calc;
+    thinknode_calc_request shallow_calc;
     switch (get_tag(request))
     {
-        case calculation_request_tag::REFERENCE:
-        case calculation_request_tag::VALUE:
+        case thinknode_calc_request_tag::REFERENCE:
+        case thinknode_calc_request_tag::VALUE:
             co_return std::move(request);
-        case calculation_request_tag::FUNCTION: {
+        case thinknode_calc_request_tag::FUNCTION: {
             auto subtasks = map(recurse, std::move(as_function(request).args));
-            shallow_calc = make_calculation_request_with_function(
-                make_function_application(
+            shallow_calc = make_thinknode_calc_request_with_function(
+                make_thinknode_function_application(
                     as_function(request).account,
                     as_function(request).app,
                     as_function(request).name,
@@ -998,73 +998,73 @@ post_calculation_piecewise(
                     co_await cppcoro::when_all(std::move(subtasks))));
             break;
         }
-        case calculation_request_tag::ARRAY: {
+        case thinknode_calc_request_tag::ARRAY: {
             auto subtasks = map(recurse, std::move(as_array(request).items));
-            shallow_calc = make_calculation_request_with_array(
-                make_calculation_array_request(
+            shallow_calc = make_thinknode_calc_request_with_array(
+                make_thinknode_array_calc(
                     co_await cppcoro::when_all(std::move(subtasks)),
                     as_array(request).item_schema));
             break;
         }
-        case calculation_request_tag::ITEM:
-            shallow_calc = make_calculation_request_with_item(
-                make_calculation_item_request(
+        case thinknode_calc_request_tag::ITEM:
+            shallow_calc = make_thinknode_calc_request_with_item(
+                make_thinknode_item_calc(
                     co_await recurse(as_item(request).array),
                     as_item(request).index,
                     as_item(request).schema));
             break;
-        case calculation_request_tag::OBJECT: {
-            std::map<string, calculation_request> properties;
+        case thinknode_calc_request_tag::OBJECT: {
+            std::map<string, thinknode_calc_request> properties;
             for (auto& property : as_object(request).properties)
             {
                 properties[property.first]
                     = co_await recurse(std::move(property.second));
             }
-            shallow_calc = make_calculation_request_with_object(
-                make_calculation_object_request(
+            shallow_calc = make_thinknode_calc_request_with_object(
+                make_thinknode_object_calc(
                     properties, as_object(request).schema));
             break;
         }
-        case calculation_request_tag::PROPERTY:
-            shallow_calc = make_calculation_request_with_property(
-                make_calculation_property_request(
+        case thinknode_calc_request_tag::PROPERTY:
+            shallow_calc = make_thinknode_calc_request_with_property(
+                make_thinknode_property_calc(
                     co_await recurse(as_property(request).object),
                     as_property(request).field,
                     as_property(request).schema));
             break;
-        case calculation_request_tag::LET: {
-            std::map<string, calculation_request> variables;
+        case thinknode_calc_request_tag::LET: {
+            std::map<string, thinknode_calc_request> variables;
             for (auto& property : as_let(request).variables)
             {
                 variables[property.first]
                     = co_await recurse(std::move(property.second));
             }
-            shallow_calc = make_calculation_request_with_let(
-                make_let_calculation_request(variables, as_let(request).in));
+            shallow_calc = make_thinknode_calc_request_with_let(
+                make_thinknode_let_calc(variables, as_let(request).in));
             break;
         }
-        case calculation_request_tag::VARIABLE:
+        case thinknode_calc_request_tag::VARIABLE:
             co_return request;
-        case calculation_request_tag::META:
-            shallow_calc = make_calculation_request_with_meta(
-                make_meta_calculation_request(
+        case thinknode_calc_request_tag::META:
+            shallow_calc = make_thinknode_calc_request_with_meta(
+                make_thinknode_meta_calc(
                     co_await recurse(as_meta(request).generator),
                     as_meta(request).schema));
             break;
-        case calculation_request_tag::CAST:
-            shallow_calc = make_calculation_request_with_cast(
-                make_calculation_cast_request(
+        case thinknode_calc_request_tag::CAST:
+            shallow_calc = make_thinknode_calc_request_with_cast(
+                make_thinknode_cast_request(
                     as_cast(request).schema,
                     co_await recurse(as_cast(request).object)));
             break;
         default:
             CRADLE_THROW(
                 invalid_enum_value()
-                << enum_id_info("calculation_request_tag")
+                << enum_id_info("thinknode_calc_request_tag")
                 << enum_value_info(static_cast<int>(get_tag(request))));
     }
 
-    co_return make_calculation_request_with_reference(
+    co_return make_thinknode_calc_request_with_reference(
         co_await post_calculation(
             core, session, context_id, std::move(shallow_calc)));
 }
@@ -1076,7 +1076,7 @@ post_calculation_piecewise(
     service_core& core,
     thinknode_session session,
     string context_id,
-    calculation_request request)
+    thinknode_calc_request request)
 {
     co_return as_reference(co_await detail::post_calculation_piecewise(
         core, std::move(session), std::move(context_id), std::move(request)));
@@ -1217,13 +1217,13 @@ struct simple_calculation_submitter : calculation_submission_interface
     submit(
         thinknode_session session,
         string context_id,
-        calculation_request request,
+        thinknode_calc_request request,
         bool dry_run)
     {
         auto submitter = [](service_core& service,
                             thinknode_session session,
                             string context_id,
-                            calculation_request request,
+                            thinknode_calc_request request,
                             bool dry_run) -> cppcoro::task<optional<string>> {
             // If the calculation is simply a reference, just return the ID
             // directly.
@@ -1258,7 +1258,7 @@ resolve_meta_chain(
     service_core& service,
     thinknode_session session,
     string context_id,
-    calculation_request request)
+    thinknode_calc_request request)
 {
     CRADLE_LOG_CALL(
         << CRADLE_LOG_ARG(session) << CRADLE_LOG_ARG(context_id)
@@ -1269,10 +1269,10 @@ resolve_meta_chain(
     {
         auto generator = as_meta(std::move(request)).generator;
         request
-            = from_dynamic<calculation_request>(co_await perform_local_calc(
+            = from_dynamic<thinknode_calc_request>(co_await perform_local_calc(
                 service, session, context_id, std::move(generator)));
     }
-    auto submission_info = co_await submit_let_calculation_request(
+    auto submission_info = co_await submit_thinknode_let_calc(
         submitter,
         session,
         context_id,
@@ -1285,7 +1285,7 @@ locally_resolve_meta_chain(
     service_core& service,
     thinknode_session session,
     string context_id,
-    calculation_request request)
+    thinknode_calc_request request)
 {
     CRADLE_LOG_CALL(
         << CRADLE_LOG_ARG(session) << CRADLE_LOG_ARG(context_id)
@@ -1296,7 +1296,7 @@ locally_resolve_meta_chain(
     {
         auto generator = as_meta(std::move(request)).generator;
         request
-            = from_dynamic<calculation_request>(co_await perform_local_calc(
+            = from_dynamic<thinknode_calc_request>(co_await perform_local_calc(
                 service, session, context_id, std::move(generator)));
     }
 
@@ -1449,21 +1449,21 @@ uncached_resolve_results_api_query(
         service,
         session,
         plan_context,
-        make_calculation_request_with_cast(calculation_cast_request(
+        make_thinknode_calc_request_with_cast(thinknode_cast_request(
             make_thinknode_type_info_with_dynamic_type(
                 thinknode_dynamic_type()),
-            make_calculation_request_with_reference(plan_iss_id))));
+            make_thinknode_calc_request_with_reference(plan_iss_id))));
 
     // Issue the "api_" form of the generator request.
-    std::vector<calculation_request> calc_args;
+    std::vector<thinknode_calc_request> calc_args;
     calc_args.reserve(args.size() + 1);
     // The first argument is always the (dynamic) plan.
     calc_args.push_back(
-        make_calculation_request_with_reference(dynamic_plan_id));
+        make_thinknode_calc_request_with_reference(dynamic_plan_id));
     for (auto const& arg : args)
-        calc_args.push_back(make_calculation_request_with_value(arg));
-    auto generator_request
-        = make_calculation_request_with_function(function_application(
+        calc_args.push_back(make_thinknode_calc_request_with_value(arg));
+    auto generator_request = make_thinknode_calc_request_with_function(
+        thinknode_function_application(
             "mgh", "planning", "api_" + function, none, calc_args));
     auto generator_calc_id = co_await post_calculation(
         service, session, context_id, generator_request);
@@ -1484,7 +1484,7 @@ uncached_resolve_results_api_query(
         service,
         session,
         generated_request.context_id,
-        make_calculation_request_with_meta(meta_calculation_request{
+        make_thinknode_calc_request_with_meta(thinknode_meta_calc{
             *std::move(generated_request.request),
             // This isn't used.
             make_thinknode_type_info_with_dynamic_type(
@@ -1512,21 +1512,21 @@ locally_resolve_results_api_query(
         service,
         session,
         plan_context,
-        make_calculation_request_with_cast(calculation_cast_request(
+        make_thinknode_calc_request_with_cast(thinknode_cast_request(
             make_thinknode_type_info_with_dynamic_type(
                 thinknode_dynamic_type()),
-            make_calculation_request_with_reference(plan_iss_id))));
+            make_thinknode_calc_request_with_reference(plan_iss_id))));
 
     // Issue the "api_" form of the generator request.
-    std::vector<calculation_request> calc_args;
+    std::vector<thinknode_calc_request> calc_args;
     calc_args.reserve(args.size() + 1);
     // The first argument is always the (dynamic) plan.
     calc_args.push_back(
-        make_calculation_request_with_reference(dynamic_plan_id));
+        make_thinknode_calc_request_with_reference(dynamic_plan_id));
     for (auto const& arg : args)
-        calc_args.push_back(make_calculation_request_with_value(arg));
-    auto generator_request
-        = make_calculation_request_with_function(function_application(
+        calc_args.push_back(make_thinknode_calc_request_with_value(arg));
+    auto generator_request = make_thinknode_calc_request_with_function(
+        thinknode_function_application(
             "mgh", "planning", "api_" + function, none, calc_args));
     auto generator_calc_id = co_await post_calculation(
         service, session, context_id, generator_request);
@@ -1547,7 +1547,7 @@ locally_resolve_results_api_query(
         service,
         session,
         generated_request.context_id,
-        make_calculation_request_with_meta(meta_calculation_request{
+        make_thinknode_calc_request_with_meta(thinknode_meta_calc{
             *std::move(generated_request.request),
             // This isn't used.
             make_thinknode_type_info_with_dynamic_type(
@@ -1869,7 +1869,7 @@ process_message(websocket_server_impl& server, client_request request)
                 server.core,
                 get_client(server.clients, request.client).session,
                 rmc.context_id,
-                make_calculation_request_with_meta(meta_calculation_request{
+                make_thinknode_calc_request_with_meta(thinknode_meta_calc{
                     std::move(rmc.generator),
                     // This isn't used.
                     make_thinknode_type_info_with_dynamic_type(

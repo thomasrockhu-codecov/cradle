@@ -58,6 +58,15 @@ deeply_copy_calculation(
     string destination_context_id,
     string object_id);
 
+cppcoro::task<nil_t>
+deeply_copy_calculation(
+    service_core& service,
+    thinknode_session session,
+    string source_bucket,
+    string source_context_id,
+    string destination_context_id,
+    string object_id);
+
 } // namespace cradle
 
 #endif

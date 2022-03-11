@@ -143,7 +143,7 @@ api(struct)
 struct post_calculation_request
 {
     std::string context_id;
-    cradle::calculation_request calculation;
+    cradle::thinknode_calc_request calculation;
 };
 
 api(struct)
@@ -170,7 +170,7 @@ api(struct)
 struct resolve_meta_chain_request
 {
     std::string context_id;
-    cradle::calculation_request generator;
+    cradle::thinknode_calc_request generator;
 };
 
 api(struct)
@@ -189,7 +189,7 @@ struct calculation_request_message
 api(struct)
 struct calculation_request_response
 {
-    cradle::calculation_request calculation;
+    cradle::thinknode_calc_request calculation;
 };
 
 api(struct)

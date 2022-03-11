@@ -18,7 +18,7 @@ post_calculation(
     service_core& service,
     thinknode_session session,
     string context_id,
-    calculation_request request);
+    thinknode_calc_request request);
 
 // Given a calculation status, get the next status that would represent
 // meaningful progress. If the result is none, no further progress is possible.
@@ -51,7 +51,7 @@ long_poll_calculation_status(
     string calc_id);
 
 // Retrieve a calculation request from Thinknode.
-cppcoro::shared_task<calculation_request>
+cppcoro::shared_task<thinknode_calc_request>
 retrieve_calculation_request(
     service_core& service,
     thinknode_session session,
@@ -59,10 +59,10 @@ retrieve_calculation_request(
     string calc_id);
 
 // Substitute the variables in a Thinknode request for new requests.
-calculation_request
+thinknode_calc_request
 substitute_variables(
-    std::map<string, calculation_request> const& substitutions,
-    calculation_request const& request);
+    std::map<string, thinknode_calc_request> const& substitutions,
+    thinknode_calc_request const& request);
 
 struct calculation_submission_interface
 {
@@ -78,7 +78,7 @@ struct calculation_submission_interface
     submit(
         thinknode_session session,
         string context_id,
-        calculation_request request,
+        thinknode_calc_request request,
         bool dry_run)
         = 0;
 };
@@ -106,7 +106,7 @@ struct calculation_submission_interface
 // optional return type).
 //
 cppcoro::task<optional<let_calculation_submission_info>>
-submit_let_calculation_request(
+submit_thinknode_let_calc(
     calculation_submission_interface& submitter,
     thinknode_session session,
     string context_id,

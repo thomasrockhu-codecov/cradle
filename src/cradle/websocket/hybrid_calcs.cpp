@@ -228,7 +228,7 @@ resolve_hybrid_calc_to_value(
         default:
             CRADLE_THROW(
                 invalid_enum_value()
-                << enum_id_info("calculation_request_tag")
+                << enum_id_info("thinknode_calc_request_tag")
                 << enum_value_info(static_cast<int>(get_tag(request))));
     }
 }
@@ -246,13 +246,13 @@ resolve_hybrid_calc_to_iss_object(
     // subcalculations are stored as references) and then post that
     // calculation.
     auto recurse = [&](hybrid_calculation_request calc)
-        -> cppcoro::task<calculation_request> {
-        co_return make_calculation_request_with_reference(
+        -> cppcoro::task<thinknode_calc_request> {
+        co_return make_thinknode_calc_request_with_reference(
             co_await resolve_hybrid_calc_to_iss_object(
                 service, session, context_id, environment, std::move(calc)));
     };
-    auto post_calc
-        = [&](calculation_request calc) -> cppcoro::shared_task<std::string> {
+    auto post_calc =
+        [&](thinknode_calc_request calc) -> cppcoro::shared_task<std::string> {
         return post_calculation(service, session, context_id, std::move(calc));
     };
 
@@ -303,8 +303,8 @@ resolve_hybrid_calc_to_iss_object(
                 auto subtasks
                     = map(recurse, std::move(as_function(request).args));
                 co_return co_await post_calc(
-                    make_calculation_request_with_function(
-                        make_function_application(
+                    make_thinknode_calc_request_with_function(
+                        make_thinknode_function_application(
                             as_function(request).account,
                             as_function(request).app,
                             as_function(request).name,
@@ -314,32 +314,34 @@ resolve_hybrid_calc_to_iss_object(
         }
         case hybrid_calculation_request_tag::ARRAY: {
             auto subtasks = map(recurse, std::move(as_array(request).items));
-            co_return co_await post_calc(make_calculation_request_with_array(
-                make_calculation_array_request(
-                    co_await cppcoro::when_all(std::move(subtasks)),
-                    as_array(request).item_schema)));
+            co_return co_await post_calc(
+                make_thinknode_calc_request_with_array(
+                    make_thinknode_array_calc(
+                        co_await cppcoro::when_all(std::move(subtasks)),
+                        as_array(request).item_schema)));
         }
         case hybrid_calculation_request_tag::ITEM:
-            co_return co_await post_calc(make_calculation_request_with_item(
-                make_calculation_item_request(
+            co_return co_await post_calc(
+                make_thinknode_calc_request_with_item(make_thinknode_item_calc(
                     co_await recurse(as_item(request).array),
                     co_await recurse(as_item(request).index),
                     as_item(request).schema)));
         case hybrid_calculation_request_tag::OBJECT: {
-            std::map<string, calculation_request> properties;
+            std::map<string, thinknode_calc_request> properties;
             for (auto& property : as_object(request).properties)
             {
                 properties[property.first]
                     = co_await recurse(std::move(property.second));
             }
-            co_return co_await post_calc(make_calculation_request_with_object(
-                make_calculation_object_request(
-                    properties, as_object(request).schema)));
+            co_return co_await post_calc(
+                make_thinknode_calc_request_with_object(
+                    make_thinknode_object_calc(
+                        properties, as_object(request).schema)));
         }
         case hybrid_calculation_request_tag::PROPERTY:
             co_return co_await post_calc(
-                make_calculation_request_with_property(
-                    make_calculation_property_request(
+                make_thinknode_calc_request_with_property(
+                    make_thinknode_property_calc(
                         co_await recurse(as_property(request).object),
                         co_await recurse(as_property(request).field),
                         as_property(request).schema)));
@@ -364,19 +366,19 @@ resolve_hybrid_calc_to_iss_object(
                 environment,
                 environment.at(as_variable(request)));
         case hybrid_calculation_request_tag::META:
-            co_return co_await post_calc(make_calculation_request_with_meta(
-                make_meta_calculation_request(
+            co_return co_await post_calc(
+                make_thinknode_calc_request_with_meta(make_thinknode_meta_calc(
                     co_await recurse(as_meta(request).generator),
                     as_meta(request).schema)));
         case hybrid_calculation_request_tag::CAST:
-            co_return co_await post_calc(make_calculation_request_with_cast(
-                make_calculation_cast_request(
+            co_return co_await post_calc(make_thinknode_calc_request_with_cast(
+                make_thinknode_cast_request(
                     as_cast(request).schema,
                     co_await recurse(as_cast(request).object))));
         default:
             CRADLE_THROW(
                 invalid_enum_value()
-                << enum_id_info("calculation_request_tag")
+                << enum_id_info("thinknode_calc_request_tag")
                 << enum_value_info(static_cast<int>(get_tag(request))));
     }
 }

@@ -11,7 +11,7 @@ perform_local_calc(
     service_core& service,
     thinknode_session const& session,
     string const& context_id,
-    calculation_request request);
+    thinknode_calc_request request);
 
 }
 

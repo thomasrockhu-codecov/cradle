@@ -10,7 +10,7 @@
 #include <cppcoro/task.hpp>
 
 #include <cradle/core/type_definitions.h> // blob
-#include <cradle/thinknode/types.hpp> // calculation_request
+#include <cradle/thinknode/types.hpp> // thinknode_calc_request
 
 namespace cradle {
 
@@ -132,7 +132,7 @@ copy_calculation(
     std::string destination_context_id,
     std::string calculation_id);
 
-cppcoro::shared_task<calculation_request>
+cppcoro::shared_task<thinknode_calc_request>
 retrieve_calculation_request(
     api_session& session, std::string context_id, std::string calculation_id);
 

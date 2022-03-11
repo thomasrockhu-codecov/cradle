@@ -14,20 +14,20 @@
 
 namespace cradle {
 
-static calculation_request
-sanitize_request(calculation_request const& request)
+static thinknode_calc_request
+sanitize_request(thinknode_calc_request const& request)
 {
-    auto recursive_call = [](calculation_request const& request) {
+    auto recursive_call = [](thinknode_calc_request const& request) {
         return sanitize_request(request);
     };
     switch (get_tag(request))
     {
-        case calculation_request_tag::REFERENCE:
-        case calculation_request_tag::VALUE:
+        case thinknode_calc_request_tag::REFERENCE:
+        case thinknode_calc_request_tag::VALUE:
             return request;
-        case calculation_request_tag::FUNCTION:
-            return make_calculation_request_with_function(
-                make_function_application(
+        case thinknode_calc_request_tag::FUNCTION:
+            return make_thinknode_calc_request_with_function(
+                make_thinknode_function_application(
                     as_function(request).account,
                     as_function(request).app,
                     as_function(request).name,
@@ -36,49 +36,49 @@ sanitize_request(calculation_request const& request)
                             ? *as_function(request).level
                             : integer(4)),
                     map(recursive_call, as_function(request).args)));
-        case calculation_request_tag::ARRAY:
-            return make_calculation_request_with_array(
-                make_calculation_array_request(
+        case thinknode_calc_request_tag::ARRAY:
+            return make_thinknode_calc_request_with_array(
+                make_thinknode_array_calc(
                     map(recursive_call, as_array(request).items),
                     as_array(request).item_schema));
-        case calculation_request_tag::ITEM:
-            return make_calculation_request_with_item(
-                make_calculation_item_request(
+        case thinknode_calc_request_tag::ITEM:
+            return make_thinknode_calc_request_with_item(
+                make_thinknode_item_calc(
                     recursive_call(as_item(request).array),
                     as_item(request).index,
                     as_item(request).schema));
-        case calculation_request_tag::OBJECT:
-            return make_calculation_request_with_object(
-                make_calculation_object_request(
+        case thinknode_calc_request_tag::OBJECT:
+            return make_thinknode_calc_request_with_object(
+                make_thinknode_object_calc(
                     map(recursive_call, as_object(request).properties),
                     as_object(request).schema));
-        case calculation_request_tag::PROPERTY:
-            return make_calculation_request_with_property(
-                make_calculation_property_request(
+        case thinknode_calc_request_tag::PROPERTY:
+            return make_thinknode_calc_request_with_property(
+                make_thinknode_property_calc(
                     recursive_call(as_property(request).object),
                     as_property(request).field,
                     as_property(request).schema));
-        case calculation_request_tag::LET:
-            return make_calculation_request_with_let(
-                make_let_calculation_request(
+        case thinknode_calc_request_tag::LET:
+            return make_thinknode_calc_request_with_let(
+                make_thinknode_let_calc(
                     map(recursive_call, as_let(request).variables),
                     recursive_call(as_let(request).in)));
-        case calculation_request_tag::VARIABLE:
+        case thinknode_calc_request_tag::VARIABLE:
             return request;
-        case calculation_request_tag::META:
-            return make_calculation_request_with_meta(
-                make_meta_calculation_request(
+        case thinknode_calc_request_tag::META:
+            return make_thinknode_calc_request_with_meta(
+                make_thinknode_meta_calc(
                     recursive_call(as_meta(request).generator),
                     as_meta(request).schema));
-        case calculation_request_tag::CAST:
-            return make_calculation_request_with_cast(
-                make_calculation_cast_request(
+        case thinknode_calc_request_tag::CAST:
+            return make_thinknode_calc_request_with_cast(
+                make_thinknode_cast_request(
                     as_cast(request).schema,
                     recursive_call(as_cast(request).object)));
         default:
             CRADLE_THROW(
                 invalid_enum_value()
-                << enum_id_info("calculation_request_tag")
+                << enum_id_info("thinknode_calc_request_tag")
                 << enum_value_info(static_cast<int>(get_tag(request))));
     }
 }
@@ -90,7 +90,7 @@ post_calculation(
     service_core& service,
     thinknode_session session,
     string context_id,
-    calculation_request request)
+    thinknode_calc_request request)
 {
     if (is_reference(request))
         co_return as_reference(request);
@@ -120,7 +120,7 @@ post_calculation(
     service_core& service,
     thinknode_session session,
     string context_id,
-    calculation_request request)
+    thinknode_calc_request request)
 {
     auto cache_key = make_sha256_hashed_id(
         "post_calculation", session.api_url, context_id, request);
@@ -301,7 +301,7 @@ long_poll_calculation_status(
 
 namespace uncached {
 
-cppcoro::task<calculation_request>
+cppcoro::task<thinknode_calc_request>
 retrieve_calculation_request(
     service_core& service,
     thinknode_session session,
@@ -315,12 +315,13 @@ retrieve_calculation_request(
 
     auto response = co_await async_http_request(service, query);
 
-    co_return from_dynamic<calculation_request>(parse_json_response(response));
+    co_return from_dynamic<thinknode_calc_request>(
+        parse_json_response(response));
 }
 
 } // namespace uncached
 
-cppcoro::shared_task<calculation_request>
+cppcoro::shared_task<thinknode_calc_request>
 retrieve_calculation_request(
     service_core& service,
     thinknode_session session,
@@ -330,7 +331,7 @@ retrieve_calculation_request(
     auto cache_key = make_sha256_hashed_id(
         "retrieve_calculation_request", session.api_url, context_id, calc_id);
 
-    return fully_cached<calculation_request>(
+    return fully_cached<thinknode_calc_request>(
         service, cache_key, [=, &service] {
             return uncached::retrieve_calculation_request(
                 service, session, context_id, calc_id);
@@ -338,55 +339,55 @@ retrieve_calculation_request(
 }
 
 // Substitute the variables in a Thinknode request for new requests.
-calculation_request
+thinknode_calc_request
 substitute_variables(
-    std::map<string, calculation_request> const& substitutions,
-    calculation_request const& request)
+    std::map<string, thinknode_calc_request> const& substitutions,
+    thinknode_calc_request const& request)
 {
     auto recursive_call
-        = [&substitutions](calculation_request const& request) {
+        = [&substitutions](thinknode_calc_request const& request) {
               return substitute_variables(substitutions, request);
           };
     switch (get_tag(request))
     {
-        case calculation_request_tag::REFERENCE:
-        case calculation_request_tag::VALUE:
+        case thinknode_calc_request_tag::REFERENCE:
+        case thinknode_calc_request_tag::VALUE:
             return request;
-        case calculation_request_tag::FUNCTION:
-            return make_calculation_request_with_function(
-                make_function_application(
+        case thinknode_calc_request_tag::FUNCTION:
+            return make_thinknode_calc_request_with_function(
+                make_thinknode_function_application(
                     as_function(request).account,
                     as_function(request).app,
                     as_function(request).name,
                     as_function(request).level,
                     map(recursive_call, as_function(request).args)));
-        case calculation_request_tag::ARRAY:
-            return make_calculation_request_with_array(
-                make_calculation_array_request(
+        case thinknode_calc_request_tag::ARRAY:
+            return make_thinknode_calc_request_with_array(
+                make_thinknode_array_calc(
                     map(recursive_call, as_array(request).items),
                     as_array(request).item_schema));
-        case calculation_request_tag::ITEM:
-            return make_calculation_request_with_item(
-                make_calculation_item_request(
+        case thinknode_calc_request_tag::ITEM:
+            return make_thinknode_calc_request_with_item(
+                make_thinknode_item_calc(
                     recursive_call(as_item(request).array),
                     as_item(request).index,
                     as_item(request).schema));
-        case calculation_request_tag::OBJECT:
-            return make_calculation_request_with_object(
-                make_calculation_object_request(
+        case thinknode_calc_request_tag::OBJECT:
+            return make_thinknode_calc_request_with_object(
+                make_thinknode_object_calc(
                     map(recursive_call, as_object(request).properties),
                     as_object(request).schema));
-        case calculation_request_tag::PROPERTY:
-            return make_calculation_request_with_property(
-                make_calculation_property_request(
+        case thinknode_calc_request_tag::PROPERTY:
+            return make_thinknode_calc_request_with_property(
+                make_thinknode_property_calc(
                     recursive_call(as_property(request).object),
                     as_property(request).field,
                     as_property(request).schema));
-        case calculation_request_tag::LET:
+        case thinknode_calc_request_tag::LET:
             CRADLE_THROW(
                 internal_check_failed() << internal_error_message_info(
                     "encountered let request during variable substitution"));
-        case calculation_request_tag::VARIABLE: {
+        case thinknode_calc_request_tag::VARIABLE: {
             auto substitution = substitutions.find(as_variable(request));
             if (substitution == substitutions.end())
             {
@@ -396,26 +397,26 @@ substitute_variables(
             }
             return substitution->second;
         }
-        case calculation_request_tag::META:
-            return make_calculation_request_with_meta(
-                make_meta_calculation_request(
+        case thinknode_calc_request_tag::META:
+            return make_thinknode_calc_request_with_meta(
+                make_thinknode_meta_calc(
                     recursive_call(as_meta(request).generator),
                     as_meta(request).schema));
-        case calculation_request_tag::CAST:
-            return make_calculation_request_with_cast(
-                make_calculation_cast_request(
+        case thinknode_calc_request_tag::CAST:
+            return make_thinknode_calc_request_with_cast(
+                make_thinknode_cast_request(
                     as_cast(request).schema,
                     recursive_call(as_cast(request).object)));
         default:
             CRADLE_THROW(
                 invalid_enum_value()
-                << enum_id_info("calculation_request_tag")
+                << enum_id_info("thinknode_calc_request_tag")
                 << enum_value_info(static_cast<int>(get_tag(request))));
     }
 }
 
 cppcoro::task<optional<let_calculation_submission_info>>
-submit_let_calculation_request(
+submit_thinknode_let_calc(
     calculation_submission_interface& submitter,
     thinknode_session session,
     string context_id,
@@ -428,11 +429,11 @@ submit_let_calculation_request(
     // deconstruct that one-by-one, submitting the requests and recording the
     // substitutions...
 
-    std::map<string, calculation_request> substitutions;
+    std::map<string, thinknode_calc_request> substitutions;
 
     // :current_request stores a pointer into the full request that indicates
     // how far we've unwrapped it.
-    calculation_request const* current_request = &augmented_request.request;
+    thinknode_calc_request const* current_request = &augmented_request.request;
 
     while (is_let(*current_request))
     {
@@ -455,7 +456,7 @@ submit_let_calculation_request(
 
             // We got a calculation ID, so record the new substitution.
             substitutions[var.first]
-                = make_calculation_request_with_reference(*calculation_id);
+                = make_thinknode_calc_request_with_reference(*calculation_id);
 
             // If this is a reported variable, record it.
             auto const& reported = augmented_request.reported_variables;
@@ -511,7 +512,7 @@ search_calculation(
         co_return;
 
     // Get the calculation request;
-    calculation_request request;
+    thinknode_calc_request request;
     try
     {
         request = co_await retrieve_calculation_request(
@@ -535,7 +536,7 @@ search_calculation(
     }
 
     auto recurse
-        = [&](calculation_request const& request) -> cppcoro::task<void> {
+        = [&](thinknode_calc_request const& request) -> cppcoro::task<void> {
         if (is_reference(request))
         {
             auto ref = as_reference(request);
@@ -554,55 +555,55 @@ search_calculation(
 
     switch (get_tag(request))
     {
-        case calculation_request_tag::REFERENCE:
-        case calculation_request_tag::VALUE:
+        case thinknode_calc_request_tag::REFERENCE:
+        case thinknode_calc_request_tag::VALUE:
             is_matching[calculation_id] = false;
             break;
-        case calculation_request_tag::FUNCTION:
+        case thinknode_calc_request_tag::FUNCTION:
             is_matching[calculation_id]
                 = as_function(request).name.find(search_string)
                   != string::npos;
             for (auto const& arg : as_function(request).args)
                 co_await recurse(arg);
             break;
-        case calculation_request_tag::ARRAY:
+        case thinknode_calc_request_tag::ARRAY:
             is_matching[calculation_id] = false;
             for (auto const& item : as_array(request).items)
                 co_await recurse(item);
             break;
-        case calculation_request_tag::ITEM:
+        case thinknode_calc_request_tag::ITEM:
             is_matching[calculation_id] = false;
             co_await recurse(as_item(request).array);
             break;
-        case calculation_request_tag::OBJECT:
+        case thinknode_calc_request_tag::OBJECT:
             is_matching[calculation_id] = false;
             for (auto const& property : as_object(request).properties)
                 co_await recurse(property.second);
             break;
-        case calculation_request_tag::PROPERTY:
+        case thinknode_calc_request_tag::PROPERTY:
             is_matching[calculation_id] = false;
             co_await recurse(as_property(request).object);
             break;
-        case calculation_request_tag::LET:
+        case thinknode_calc_request_tag::LET:
             CRADLE_THROW(
                 internal_check_failed() << internal_error_message_info(
                     "resolved calculation request contains 'let'"));
-        case calculation_request_tag::VARIABLE:
+        case thinknode_calc_request_tag::VARIABLE:
             CRADLE_THROW(
                 internal_check_failed() << internal_error_message_info(
                     "resolved calculation request contains 'variable'"));
-        case calculation_request_tag::META:
+        case thinknode_calc_request_tag::META:
             is_matching[calculation_id] = false;
             co_await recurse(as_meta(request).generator);
             break;
-        case calculation_request_tag::CAST:
+        case thinknode_calc_request_tag::CAST:
             is_matching[calculation_id] = false;
             co_await recurse(as_cast(request).object);
             break;
         default:
             CRADLE_THROW(
                 invalid_enum_value()
-                << enum_id_info("calculation_request_tag")
+                << enum_id_info("thinknode_calc_request_tag")
                 << enum_value_info(static_cast<int>(get_tag(request))));
     }
 }

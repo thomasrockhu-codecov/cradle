@@ -43,8 +43,9 @@ make_service_config(api_service_config const& config)
         if (!config.disk_cache_size_limit)
         {
             CRADLE_THROW(
-                external_api_violation() << reason_info(
-                    "config.disk_cache_directory given but not config.disk_cache_size_limit"));
+                external_api_violation()
+                << reason_info("config.disk_cache_directory given but not "
+                               "config.disk_cache_size_limit"));
         }
         result.disk_cache = cradle::disk_cache_config{};
         if (config.disk_cache_directory)
@@ -203,7 +204,7 @@ copy_calculation(
         std::move(calculation_id));
 }
 
-cppcoro::shared_task<calculation_request>
+cppcoro::shared_task<thinknode_calc_request>
 retrieve_calculation_request(
     api_session& session, std::string context_id, std::string calculation_id)
 {
