@@ -1,7 +1,8 @@
-#ifndef CRADLE_LAMBDA_CALCS_H
-#define CRADLE_LAMBDA_CALCS_H
+#ifndef CRADLE_WEBSOCKET_LAMBDA_CALCS_H
+#define CRADLE_WEBSOCKET_LAMBDA_CALCS_H
 
 #include <cradle/core/id.h>
+#include <cradle/websocket/types.hpp>
 
 namespace cradle {
 
@@ -28,6 +29,16 @@ auto
 make_function_id(Function f)
 {
     return make_id(static_cast<Function*>(nullptr));
+}
+
+template<class Function>
+lambda_function
+make_function(Function&& function)
+{
+    lambda_function f;
+    f.id.capture(make_function_id(function));
+    f.object = std::forward<Function>(function);
+    return f;
 }
 
 } // namespace cradle

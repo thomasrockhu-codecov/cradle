@@ -109,6 +109,14 @@ resolve_hybrid_calc_to_value(
                 service, session, context_id, as_reference(request));
         case hybrid_calculation_request_tag::VALUE:
             co_return as_value(std::move(request));
+        case hybrid_calculation_request_tag::LAMBDA: {
+            std::vector<dynamic> arg_values;
+            auto lambda = as_lambda(std::move(request));
+            // TODO: Do this in parallel.
+            for (auto& arg : lambda.args)
+                arg_values.push_back(co_await recursive_call(std::move(arg)));
+            co_return lambda.function.object(std::move(arg_values));
+        }
         case hybrid_calculation_request_tag::FUNCTION:
             // If the function is specifically requested to be executed
             // remotely in Thinknode, then resolve the calculation to an ISS
@@ -132,6 +140,7 @@ resolve_hybrid_calc_to_value(
             {
                 std::vector<dynamic> arg_values;
                 auto function = as_function(std::move(request));
+                // TODO: Do this in parallel.
                 for (auto& arg : function.args)
                 {
                     arg_values.push_back(
@@ -265,6 +274,15 @@ resolve_hybrid_calc_to_iss_object(
             co_return as_reference(std::move(request));
         case hybrid_calculation_request_tag::VALUE:
             co_return co_await post_value(as_value(std::move(request)));
+        case hybrid_calculation_request_tag::LAMBDA: {
+            co_return co_await post_value(
+                co_await resolve_hybrid_calc_to_value(
+                    service,
+                    session,
+                    context_id,
+                    environment,
+                    std::move(request)));
+        }
         case hybrid_calculation_request_tag::FUNCTION: {
             // If the function is specifically requested to be executed
             // locally, then resolve it locally to a value and upload that to
@@ -339,7 +357,7 @@ resolve_hybrid_calc_to_iss_object(
                 std::move(let.in));
         }
         case hybrid_calculation_request_tag::VARIABLE:
-            co_await resolve_hybrid_calc_to_iss_object(
+            co_return co_await resolve_hybrid_calc_to_iss_object(
                 service,
                 session,
                 context_id,

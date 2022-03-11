@@ -52,10 +52,56 @@ struct hybrid_function_application
     std::vector<hybrid_calculation_request> args;
 };
 
-// TODO
+struct lambda_function
+{
+    captured_id id;
+    std::function<dynamic(dynamic_array const& args)> object;
+};
+inline bool
+operator<(lambda_function const& a, lambda_function const& b)
+{
+    return a.id < b.id;
+}
+inline bool
+operator==(lambda_function const& a, lambda_function const& b)
+{
+    return a.id == b.id;
+}
+inline void
+to_dynamic(dynamic* v, lambda_function const& x)
+{
+    throw "unimplemented";
+}
+inline void
+from_dynamic(lambda_function* x, dynamic const& v)
+{
+    throw "unimplemented";
+}
+inline size_t
+deep_sizeof(lambda_function const& x)
+{
+    return 0;
+}
+inline size_t
+hash_value(lambda_function const& x)
+{
+    return x.id.hash();
+}
+template<>
+struct type_info_query<lambda_function>
+{
+    static void
+    get(api_type_info*)
+    {
+        throw "unimplemented";
+    }
+};
+
 api(struct)
 struct lambda_calculation
 {
+    lambda_function function;
+    std::vector<hybrid_calculation_request> args;
 };
 
 api(struct)

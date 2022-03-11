@@ -12,6 +12,16 @@
 
 using namespace cradle;
 
+namespace {
+
+dynamic
+dynamic_subtract(dynamic_array args)
+{
+    return cast<double>(args.at(0)) - cast<double>(args.at(1));
+}
+
+} // namespace
+
 TEST_CASE("local hybrid calcs", "[hybrid_calcs][ws]")
 {
     service_core core;
@@ -69,6 +79,26 @@ TEST_CASE("local hybrid calcs", "[hybrid_calcs][ws]")
                 {make_hybrid_calculation_request_with_value(dynamic(2.0)),
                  make_hybrid_calculation_request_with_value(dynamic(0.125))})))
         == dynamic(2.125));
+
+    // lambda w/ actual lambda
+    REQUIRE(
+        eval(make_hybrid_calculation_request_with_lambda(
+            make_lambda_calculation(
+                make_function([](dynamic_array args) {
+                    return cast<double>(args.at(0)) - cast<double>(args.at(1));
+                }),
+                {make_hybrid_calculation_request_with_value(dynamic(7.0)),
+                 make_hybrid_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(6.0));
+
+    // lambda w/ function pointer
+    REQUIRE(
+        eval(make_hybrid_calculation_request_with_lambda(
+            make_lambda_calculation(
+                make_function(dynamic_subtract),
+                {make_hybrid_calculation_request_with_value(dynamic(8.0)),
+                 make_hybrid_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(7.0));
 
     // array
     REQUIRE(
@@ -189,35 +219,39 @@ TEST_CASE("mixed hybrid calcs", "[hybrid_calcs][ws]")
             core, session, "5dadeb4a004073e81b5e096255e83652", request));
     };
 
-    // function
-    REQUIRE(
-        eval(make_hybrid_calculation_request_with_function(
-            make_hybrid_function_application(
-                "mgh",
-                "dosimetry",
-                "addition",
-                execution_host_selection::LOCAL,
-                none,
-                {make_hybrid_calculation_request_with_value(dynamic(4.0)),
-                 make_hybrid_calculation_request_with_function(
-                     make_hybrid_function_application(
-                         "mgh",
-                         "dosimetry",
-                         "addition",
-                         execution_host_selection::THINKNODE,
-                         none,
-                         {make_hybrid_calculation_request_with_value(
-                              dynamic(2.0)),
-                          make_hybrid_calculation_request_with_function(
-                              make_hybrid_function_application(
-                                  "mgh",
-                                  "dosimetry",
-                                  "addition",
-                                  execution_host_selection::LOCAL,
-                                  none,
-                                  {make_hybrid_calculation_request_with_value(
-                                       dynamic(1.0)),
-                                   make_hybrid_calculation_request_with_value(
-                                       dynamic(1.0))}))}))})))
-        == dynamic(8.0));
+    auto local_calc = make_hybrid_calculation_request_with_function(
+        make_hybrid_function_application(
+            "mgh",
+            "dosimetry",
+            "addition",
+            execution_host_selection::LOCAL,
+            none,
+            {make_hybrid_calculation_request_with_value(dynamic(1.0)),
+             make_hybrid_calculation_request_with_value(dynamic(2.0))}));
+
+    auto remote_calc = make_hybrid_calculation_request_with_function(
+        make_hybrid_function_application(
+            "mgh",
+            "dosimetry",
+            "addition",
+            execution_host_selection::THINKNODE,
+            none,
+            {make_hybrid_calculation_request_with_value(dynamic(3.0)),
+             local_calc}));
+
+    auto lambda_calc
+        = make_hybrid_calculation_request_with_lambda(make_lambda_calculation(
+            make_function([](dynamic_array args) {
+                return cast<double>(args.at(0)) - cast<double>(args.at(1));
+            }),
+            {make_hybrid_calculation_request_with_value(dynamic(7.0)),
+             remote_calc}));
+
+    auto function_pointer_calc
+        = make_hybrid_calculation_request_with_lambda(make_lambda_calculation(
+            make_function(dynamic_subtract),
+            {make_hybrid_calculation_request_with_value(dynamic(8.0)),
+             lambda_calc}));
+
+    REQUIRE(eval(function_pointer_calc) == dynamic(7.0));
 }
