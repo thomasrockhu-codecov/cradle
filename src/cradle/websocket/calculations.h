@@ -55,6 +55,9 @@ resolve_calc_to_iss_object(
     string const& context_id,
     calculation_request request);
 
+calculation_request
+as_generic_calc(thinknode_calc_request const& request);
+
 } // namespace cradle
 
 #endif

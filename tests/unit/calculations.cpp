@@ -315,3 +315,113 @@ TEST_CASE("mixed calcs", "[calcs][ws]")
 
     REQUIRE(eval(function_pointer_calc) == dynamic(7.0));
 }
+
+TEST_CASE("Thinknode calc conversion", "[calcs][ws]")
+{
+    // value
+    auto original_value
+        = make_thinknode_calc_request_with_value(dynamic("xyz"));
+    auto converted_value = make_calculation_request_with_value(dynamic("xyz"));
+    REQUIRE(as_generic_calc(original_value) == converted_value);
+
+    // reference
+    auto original_reference = make_thinknode_calc_request_with_reference("a");
+    auto converted_reference = make_calculation_request_with_reference("a");
+    REQUIRE(as_generic_calc(original_reference) == converted_reference);
+
+    // function
+    REQUIRE(
+        as_generic_calc(make_thinknode_calc_request_with_function(
+            make_thinknode_function_application(
+                "my_account",
+                "my_name",
+                "my_function",
+                none,
+                {original_value, original_reference})))
+        == make_calculation_request_with_function(make_function_application(
+            "my_account",
+            "my_name",
+            "my_function",
+            execution_host_selection::THINKNODE,
+            none,
+            {converted_value, converted_reference})));
+
+    // array
+    auto item_schema
+        = make_thinknode_type_info_with_string_type(thinknode_string_type());
+    auto original_array
+        = make_thinknode_calc_request_with_array(make_thinknode_array_calc(
+            {original_value, original_reference}, item_schema));
+    auto converted_array
+        = make_calculation_request_with_array(make_array_calc_request(
+            {converted_value, converted_reference}, item_schema));
+    REQUIRE(as_generic_calc(original_array) == converted_array);
+    auto array_schema = make_thinknode_type_info_with_array_type(
+        make_thinknode_array_info(item_schema, none));
+
+    // item
+    auto original_item
+        = make_thinknode_calc_request_with_item(make_thinknode_item_calc(
+            original_array,
+            make_thinknode_calc_request_with_value(dynamic(integer(0))),
+            item_schema));
+    auto converted_item
+        = make_calculation_request_with_item(make_item_calc_request(
+            converted_array,
+            make_calculation_request_with_value(dynamic(integer(0))),
+            item_schema));
+    REQUIRE(as_generic_calc(original_item) == converted_item);
+
+    // object
+    auto object_schema = make_thinknode_type_info_with_structure_type(
+        make_thinknode_structure_info({
+            {"i", make_thinknode_structure_field_info("", none, item_schema)},
+            {"j", make_thinknode_structure_field_info("", none, item_schema)},
+        }));
+    auto original_object
+        = make_thinknode_calc_request_with_object(make_thinknode_object_calc(
+            {{"i", original_value}, {"j", original_reference}},
+            object_schema));
+    auto converted_object
+        = make_calculation_request_with_object(make_object_calc_request(
+            {{"i", converted_value}, {"j", converted_reference}},
+            object_schema));
+    REQUIRE(as_generic_calc(original_object) == converted_object);
+
+    // property
+    auto original_property = make_thinknode_calc_request_with_property(
+        make_thinknode_property_calc(
+            original_object,
+            make_thinknode_calc_request_with_value(dynamic("j")),
+            item_schema));
+    auto converted_property
+        = make_calculation_request_with_property(make_property_calc_request(
+            converted_object,
+            make_calculation_request_with_value(dynamic("j")),
+            item_schema));
+    REQUIRE(as_generic_calc(original_property) == converted_property);
+
+    // let
+    REQUIRE(
+        as_generic_calc(
+            make_thinknode_calc_request_with_let(make_thinknode_let_calc(
+                std::map<string, thinknode_calc_request>{
+                    {"a", original_value}, {"b", original_reference}},
+                original_value)))
+        == make_calculation_request_with_let(make_let_calc_request(
+            std::map<string, calculation_request>{
+                {"a", converted_value}, {"b", converted_reference}},
+            converted_value)));
+
+    // variables
+    REQUIRE(
+        as_generic_calc(make_thinknode_calc_request_with_variable("a"))
+        == make_calculation_request_with_variable("a"));
+
+    // meta
+    REQUIRE(
+        as_generic_calc(make_thinknode_calc_request_with_meta(
+            make_thinknode_meta_calc(original_array, array_schema)))
+        == make_calculation_request_with_meta(
+            make_meta_calc_request(converted_array, array_schema)));
+}

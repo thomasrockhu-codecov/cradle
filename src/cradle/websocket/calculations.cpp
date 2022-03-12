@@ -403,4 +403,66 @@ resolve_calc_to_iss_object(
         service, session, context_id, {}, std::move(request));
 }
 
+calculation_request
+as_generic_calc(thinknode_calc_request const& request)
+{
+    switch (get_tag(request))
+    {
+        case thinknode_calc_request_tag::REFERENCE:
+            return make_calculation_request_with_reference(
+                as_reference(request));
+        case thinknode_calc_request_tag::VALUE:
+            return make_calculation_request_with_value(as_value(request));
+        case thinknode_calc_request_tag::FUNCTION:
+            return make_calculation_request_with_function(
+                make_function_application(
+                    as_function(request).account,
+                    as_function(request).app,
+                    as_function(request).name,
+                    execution_host_selection::THINKNODE,
+                    as_function(request).level,
+                    map(as_generic_calc, as_function(request).args)));
+        case thinknode_calc_request_tag::ARRAY:
+            return make_calculation_request_with_array(make_array_calc_request(
+                map(as_generic_calc, as_array(request).items),
+                as_array(request).item_schema));
+        case thinknode_calc_request_tag::ITEM:
+            return make_calculation_request_with_item(make_item_calc_request(
+                as_generic_calc(as_item(request).array),
+                as_generic_calc(as_item(request).index),
+                as_item(request).schema));
+        case thinknode_calc_request_tag::OBJECT:
+            return make_calculation_request_with_object(
+                make_object_calc_request(
+                    map(as_generic_calc, as_object(request).properties),
+                    as_object(request).schema));
+        case thinknode_calc_request_tag::PROPERTY:
+            return make_calculation_request_with_property(
+                make_property_calc_request(
+                    as_generic_calc(as_property(request).object),
+                    as_generic_calc(as_property(request).field),
+                    as_property(request).schema));
+        case thinknode_calc_request_tag::LET:
+            return make_calculation_request_with_let(make_let_calc_request(
+                map(as_generic_calc, as_let(request).variables),
+                as_generic_calc(as_let(request).in)));
+        case thinknode_calc_request_tag::VARIABLE:
+            return make_calculation_request_with_variable(
+                as_variable(request));
+        case thinknode_calc_request_tag::META:
+            return make_calculation_request_with_meta(make_meta_calc_request(
+                as_generic_calc(as_meta(request).generator),
+                as_meta(request).schema));
+        case thinknode_calc_request_tag::CAST:
+            return make_calculation_request_with_cast(make_cast_calc_request(
+                as_cast(request).schema,
+                as_generic_calc(as_cast(request).object)));
+        default:
+            CRADLE_THROW(
+                invalid_enum_value()
+                << enum_id_info("thinknode_calc_request_tag")
+                << enum_value_info(static_cast<int>(get_tag(request))));
+    }
+}
+
 } // namespace cradle
