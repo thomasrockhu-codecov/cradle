@@ -7,12 +7,23 @@
 namespace cradle {
 
 cppcoro::task<dynamic>
-perform_local_calc(
+perform_local_function_calc(
     service_core& service,
     thinknode_session const& session,
     string const& context_id,
-    thinknode_calc_request request);
+    string const& account,
+    string const& app,
+    string const& name,
+    std::vector<dynamic> args);
 
-}
+cppcoro::task<dynamic>
+coerce_local_calc_result(
+    service_core& service,
+    thinknode_session const& session,
+    string const& context_id,
+    thinknode_type_info const& schema,
+    dynamic value);
+
+} // namespace cradle
 
 #endif

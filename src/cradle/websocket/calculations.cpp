@@ -27,53 +27,10 @@
 #include <cradle/utilities/errors.h>
 #include <cradle/utilities/functional.h>
 #include <cradle/utilities/logging.h>
+#include <cradle/websocket/local_calcs.h>
+#include <cradle/websocket/server_api.h>
 
 namespace cradle {
-
-// signatures for functions that we're temporarily borrowing from other places:
-
-cppcoro::shared_task<dynamic>
-get_iss_object(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string object_id,
-    bool ignore_upgrades = false);
-
-cppcoro::shared_task<api_type_info>
-resolve_named_type_reference(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    api_named_type_reference ref);
-
-cppcoro::task<thinknode_app_version_info>
-resolve_context_app(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string account,
-    string app);
-
-cppcoro::task<dynamic>
-perform_local_function_calc(
-    service_core& service,
-    thinknode_session const& session,
-    string const& context_id,
-    string const& account,
-    string const& app,
-    string const& name,
-    std::vector<dynamic> args);
-
-cppcoro::task<dynamic>
-coerce_local_calc_result(
-    service_core& service,
-    thinknode_session const& session,
-    string const& context_id,
-    thinknode_type_info const& schema,
-    dynamic value);
-
-// end of temporary borrowing
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(

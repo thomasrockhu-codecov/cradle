@@ -8,6 +8,7 @@
 
 #include <cradle/encodings/base64.h>
 #include <cradle/utilities/environment.h>
+#include <cradle/websocket/calculations.h>
 #include <cradle/websocket/messages.hpp>
 
 using namespace cradle;
@@ -24,8 +25,11 @@ TEST_CASE("local calcs", "[local_calcs][ws]")
         = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
 
     auto eval = [&](thinknode_calc_request const& request) {
-        return cppcoro::sync_wait(perform_local_calc(
-            core, session, "5dadeb4a004073e81b5e096255e83652", request));
+        return cppcoro::sync_wait(resolve_calc_to_value(
+            core,
+            session,
+            "5dadeb4a004073e81b5e096255e83652",
+            from_dynamic<calculation_request>(to_dynamic(request))));
     };
 
     // value
