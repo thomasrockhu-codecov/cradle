@@ -4,6 +4,7 @@
 #include <cradle/io/http_requests.hpp>
 #include <cradle/thinknode/types.hpp>
 #include <cradle/utilities/diff.hpp>
+#include <cradle/websocket/types.hpp>
 
 namespace cradle {
 
@@ -143,7 +144,7 @@ api(struct)
 struct post_calculation_request
 {
     std::string context_id;
-    cradle::thinknode_calc_request calculation;
+    cradle::calculation_request calculation;
 };
 
 api(struct)
@@ -170,7 +171,7 @@ api(struct)
 struct resolve_meta_chain_request
 {
     std::string context_id;
-    cradle::thinknode_calc_request generator;
+    calculation_request generator;
 };
 
 api(struct)

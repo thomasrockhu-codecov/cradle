@@ -121,8 +121,9 @@ resolve_calc_to_value(
             // If the function is specifically requested to be executed
             // remotely in Thinknode, then resolve the calculation to an ISS
             // object and download the associated data.
-            if (as_function(request).host
-                == execution_host_selection::THINKNODE)
+            if (!as_function(request).host
+                || *as_function(request).host
+                       == execution_host_selection::THINKNODE)
             {
                 co_return co_await get_iss_object(
                     service,
@@ -286,7 +287,9 @@ resolve_calc_to_iss_object(
             // If the function is specifically requested to be executed
             // locally, then resolve it locally to a value and upload that to
             // Thinknode.
-            if (as_function(request).host == execution_host_selection::LOCAL)
+            if (as_function(request).host
+                && *as_function(request).host
+                       == execution_host_selection::LOCAL)
             {
                 co_return co_await post_value(co_await resolve_calc_to_value(
                     service,

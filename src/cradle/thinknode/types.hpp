@@ -507,13 +507,6 @@ union thinknode_provider_message
     thinknode_provider_failure failure;
 };
 
-api(struct)
-struct results_api_generated_request
-{
-    std::string context_id;
-    optional<thinknode_calc_request> request;
-};
-
 } // namespace cradle
 
 #endif

@@ -47,7 +47,7 @@ struct function_application
     std::string account;
     std::string app;
     std::string name;
-    execution_host_selection host;
+    omissible<execution_host_selection> host;
     omissible<cradle::integer> level;
     std::vector<calculation_request> args;
 };
@@ -153,6 +153,13 @@ struct let_calc_request
 {
     std::map<std::string, calculation_request> variables;
     calculation_request in;
+};
+
+api(struct)
+struct results_api_generated_request
+{
+    std::string context_id;
+    optional<calculation_request> request;
 };
 
 } // namespace cradle
