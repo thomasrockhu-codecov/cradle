@@ -16,7 +16,8 @@ TEST_CASE("retrieve_calculation_request", "[external]")
     auto& mock_http = test_session.enable_http_mocking();
     mock_http.set_script(
         {{make_get_request(
-              "https://mgh.thinknode.io/api/v1.0/calc/61e53771010054e512d49dce6f3ebd8b?context=123",
+              "https://mgh.thinknode.io/api/v1.0/calc/"
+              "61e53771010054e512d49dce6f3ebd8b?context=123",
               {{"Authorization", "Bearer xyz"},
                {"Accept", "application/json"}}),
           make_http_200_response(

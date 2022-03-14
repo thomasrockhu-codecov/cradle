@@ -24,6 +24,11 @@ TEST_CASE("local calcs", "[local_calcs][ws]")
     session.access_token
         = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
 
+    // These tests were originally written to test local resolution of
+    // Thinknode calculations, which has been replaced by
+    // resolve_calc_to_value. However, it's still a useful test to see if those
+    // Thinknode calculations can be dynamically converted to the new generic
+    // calculations and resolved to the same value.
     auto eval = [&](thinknode_calc_request const& request) {
         return cppcoro::sync_wait(resolve_calc_to_value(
             core,
