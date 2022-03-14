@@ -263,6 +263,53 @@ TEST_CASE("individual calcs", "[calcs][ws]")
         == dynamic(integer(0)));
 }
 
+TEST_CASE("lambda calc caching", "[calcs][ws]")
+{
+    service_core core;
+    init_test_service(core);
+
+    thinknode_session session;
+    session.api_url = "https://mgh.thinknode.io/api/v1.0";
+    session.access_token
+        = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
+
+    int call_count = 0;
+
+    auto add = make_function([&](dynamic_array args) {
+        ++call_count;
+        return cast<double>(args.at(0)) + cast<double>(args.at(1));
+    });
+
+    auto eval = [&](calculation_request const& request) {
+        return cppcoro::sync_wait(resolve_calc_to_value(
+            core, session, "5dadeb4a004073e81b5e096255e83652", request));
+    };
+
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            add,
+            {make_calculation_request_with_value(dynamic(1.0)),
+             make_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(2.0));
+    REQUIRE(call_count == 1);
+
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            add,
+            {make_calculation_request_with_value(dynamic(1.0)),
+             make_calculation_request_with_value(dynamic(2.0))})))
+        == dynamic(3.0));
+    REQUIRE(call_count == 2);
+
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            add,
+            {make_calculation_request_with_value(dynamic(1.0)),
+             make_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(2.0));
+    REQUIRE(call_count == 2);
+}
+
 TEST_CASE("mixed calcs", "[calcs][ws]")
 {
     service_core core;

@@ -32,6 +32,38 @@
 
 namespace cradle {
 
+namespace uncached {
+
+cppcoro::task<dynamic>
+perform_lambda_calc(
+    service_core& service,
+    thinknode_session const& session,
+    lambda_function const& function,
+    std::vector<dynamic> args)
+{
+    co_return function.object(std::move(args));
+}
+
+} // namespace uncached
+
+cppcoro::task<dynamic>
+perform_lambda_calc(
+    service_core& service,
+    thinknode_session const& session,
+    lambda_function const& function,
+    std::vector<dynamic> args)
+{
+    auto cache_key = combine_ids(
+        make_id(string("lambda_calc")),
+        ref(*function.id),
+        make_id(natively_encoded_sha256(args)));
+
+    co_return co_await cached<dynamic>(service, cache_key, [&] {
+        return uncached::perform_lambda_calc(
+            service, session, function, std::move(args));
+    });
+}
+
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
     service_core& service,
@@ -72,7 +104,8 @@ resolve_calc_to_value(
             // TODO: Do this in parallel.
             for (auto& arg : lambda.args)
                 arg_values.push_back(co_await recursive_call(std::move(arg)));
-            co_return lambda.function.object(std::move(arg_values));
+            co_return co_await perform_lambda_calc(
+                service, session, lambda.function, std::move(arg_values));
         }
         case calculation_request_tag::FUNCTION:
             // If the function is specifically requested to be executed

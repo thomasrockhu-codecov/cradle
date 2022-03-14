@@ -79,7 +79,7 @@ perform_local_function_calc(
         account,
         app,
         name,
-        map(natively_encoded_sha256, args));
+        map(CRADLE_LAMBDIFY(natively_encoded_sha256), args));
 
     co_return co_await fully_cached<dynamic>(service, cache_key, [&] {
         return uncached::perform_local_function_calc(

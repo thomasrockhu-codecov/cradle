@@ -19,6 +19,9 @@ natively_encoded_sizeof(dynamic const& value);
 string
 natively_encoded_sha256(dynamic const& value);
 
+string
+natively_encoded_sha256(std::vector<dynamic> const& values);
+
 } // namespace cradle
 
 #endif
