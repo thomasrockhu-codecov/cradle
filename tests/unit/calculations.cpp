@@ -269,9 +269,6 @@ TEST_CASE("lambda calc caching", "[calcs][ws]")
     init_test_service(core);
 
     thinknode_session session;
-    session.api_url = "https://mgh.thinknode.io/api/v1.0";
-    session.access_token
-        = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
 
     int call_count = 0;
 
@@ -403,8 +400,6 @@ TEST_CASE("Thinknode calc conversion", "[calcs][ws]")
         = make_calculation_request_with_array(make_array_calc_request(
             {converted_value, converted_reference}, item_schema));
     REQUIRE(as_generic_calc(original_array) == converted_array);
-    auto array_schema = make_thinknode_type_info_with_array_type(
-        make_thinknode_array_info(item_schema, none));
 
     // item
     auto original_item
@@ -466,6 +461,8 @@ TEST_CASE("Thinknode calc conversion", "[calcs][ws]")
         == make_calculation_request_with_variable("a"));
 
     // meta
+    auto array_schema = make_thinknode_type_info_with_array_type(
+        make_thinknode_array_info(item_schema, none));
     REQUIRE(
         as_generic_calc(make_thinknode_calc_request_with_meta(
             make_thinknode_meta_calc(original_array, array_schema)))

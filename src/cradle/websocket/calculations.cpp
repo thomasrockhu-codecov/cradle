@@ -35,11 +35,7 @@ namespace cradle {
 namespace uncached {
 
 cppcoro::task<dynamic>
-perform_lambda_calc(
-    service_core& service,
-    thinknode_session const& session,
-    lambda_function const& function,
-    std::vector<dynamic> args)
+perform_lambda_calc(lambda_function const& function, std::vector<dynamic> args)
 {
     co_return function.object(std::move(args));
 }
@@ -49,7 +45,6 @@ perform_lambda_calc(
 cppcoro::task<dynamic>
 perform_lambda_calc(
     service_core& service,
-    thinknode_session const& session,
     lambda_function const& function,
     std::vector<dynamic> args)
 {
@@ -59,8 +54,7 @@ perform_lambda_calc(
         make_id(natively_encoded_sha256(args)));
 
     co_return co_await cached<dynamic>(service, cache_key, [&] {
-        return uncached::perform_lambda_calc(
-            service, session, function, std::move(args));
+        return uncached::perform_lambda_calc(function, std::move(args));
     });
 }
 
@@ -105,7 +99,7 @@ resolve_calc_to_value(
             for (auto& arg : lambda.args)
                 arg_values.push_back(co_await recursive_call(std::move(arg)));
             co_return co_await perform_lambda_calc(
-                service, session, lambda.function, std::move(arg_values));
+                service, lambda.function, std::move(arg_values));
         }
         case calculation_request_tag::FUNCTION:
             // If the function is specifically requested to be executed
@@ -236,12 +230,21 @@ resolve_calc_to_iss_object(
     // calculation to a Thinknode calculation in "shallow form" (where all
     // subcalculations are stored as references) and then post that
     // calculation.
+    //
+    // The following helpers aid in those cases.
+
+    // recurse() is used on subcalculations to reduce them to reference
+    // calculations. Note that this is not quite the same interface as
+    // resolve_calc_to_iss_object() itself provides, but it's more convenient
+    // for most of the cases here that require recursion.
     auto recurse = [&](calculation_request calc)
         -> cppcoro::task<thinknode_calc_request> {
         co_return make_thinknode_calc_request_with_reference(
             co_await resolve_calc_to_iss_object(
                 service, session, context_id, environment, std::move(calc)));
     };
+
+    // post_calc() aids in posting the shallow form of the calculation.
     auto post_calc =
         [&](thinknode_calc_request calc) -> cppcoro::shared_task<std::string> {
         return post_calculation(service, session, context_id, std::move(calc));
