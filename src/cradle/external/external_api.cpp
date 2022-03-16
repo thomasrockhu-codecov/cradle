@@ -3,7 +3,9 @@
 #include <cradle/thinknode/calc.h>
 #include <cradle/thinknode/iam.h>
 #include <cradle/thinknode/iss.h>
+#include <cradle/websocket/calculations.h>
 #include <cradle/websocket/server_api.h>
+#include <cradle/websocket/types.hpp>
 
 namespace cradle {
 
@@ -43,8 +45,9 @@ make_service_config(api_service_config const& config)
         if (!config.disk_cache_size_limit)
         {
             CRADLE_THROW(
-                external_api_violation() << reason_info(
-                    "config.disk_cache_directory given but not config.disk_cache_size_limit"));
+                external_api_violation()
+                << reason_info("config.disk_cache_directory given but not "
+                               "config.disk_cache_size_limit"));
         }
         result.disk_cache = cradle::disk_cache_config{};
         if (config.disk_cache_directory)
@@ -203,15 +206,37 @@ copy_calculation(
         std::move(calculation_id));
 }
 
-cppcoro::shared_task<calculation_request>
-retrieve_calculation_request(
-    api_session& session, std::string context_id, std::string calculation_id)
+cppcoro::task<dynamic>
+resolve_calc_to_value(
+    api_session& session, string context_id, calculation_request request)
 {
-    return cradle::retrieve_calculation_request(
+    return cradle::resolve_calc_to_value(
         session.impl().get_service_core(),
         session.impl().get_thinknode_session(),
         std::move(context_id),
-        std::move(calculation_id));
+        std::move(request));
+}
+
+cppcoro::task<std::string>
+resolve_calc_to_iss_object(
+    api_session& session, string context_id, calculation_request request)
+{
+    return cradle::resolve_calc_to_iss_object(
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
+        std::move(context_id),
+        std::move(request));
+}
+
+cppcoro::task<calculation_request>
+retrieve_calculation_request(
+    api_session& session, std::string context_id, std::string calculation_id)
+{
+    co_return as_generic_calc(co_await cradle::retrieve_calculation_request(
+        session.impl().get_service_core(),
+        session.impl().get_thinknode_session(),
+        std::move(context_id),
+        std::move(calculation_id)));
 }
 
 } // namespace external

@@ -216,4 +216,14 @@ natively_encoded_sha256(dynamic const& value)
     return buffer.hash();
 }
 
+string
+natively_encoded_sha256(std::vector<dynamic> const& values)
+{
+    sha256_hashing_buffer buffer;
+    raw_memory_writer<sha256_hashing_buffer> writer(buffer);
+    for (auto const& value : values)
+        write_natively_encoded_value(writer, value);
+    return buffer.hash();
+}
+
 } // namespace cradle

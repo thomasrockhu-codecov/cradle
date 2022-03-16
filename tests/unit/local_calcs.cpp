@@ -8,6 +8,7 @@
 
 #include <cradle/encodings/base64.h>
 #include <cradle/utilities/environment.h>
+#include <cradle/websocket/calculations.h>
 #include <cradle/websocket/messages.hpp>
 
 using namespace cradle;
@@ -23,25 +24,33 @@ TEST_CASE("local calcs", "[local_calcs][ws]")
     session.access_token
         = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
 
-    auto eval = [&](calculation_request const& request) {
-        return cppcoro::sync_wait(perform_local_calc(
-            core, session, "5dadeb4a004073e81b5e096255e83652", request));
+    // These tests were originally written to test local resolution of
+    // Thinknode calculations, which has been replaced by
+    // resolve_calc_to_value. However, it's still a useful test to see if those
+    // Thinknode calculations can be dynamically converted to the new generic
+    // calculations and resolved to the same value.
+    auto eval = [&](thinknode_calc_request const& request) {
+        return cppcoro::sync_wait(resolve_calc_to_value(
+            core,
+            session,
+            "5dadeb4a004073e81b5e096255e83652",
+            from_dynamic<calculation_request>(to_dynamic(request))));
     };
 
     // value
     REQUIRE(
-        eval(make_calculation_request_with_value(dynamic{2.5}))
+        eval(make_thinknode_calc_request_with_value(dynamic{2.5}))
         == dynamic{2.5});
     REQUIRE(
-        eval(make_calculation_request_with_value(dynamic{"foobar"}))
+        eval(make_thinknode_calc_request_with_value(dynamic{"foobar"}))
         == dynamic{"foobar"});
     REQUIRE(
-        eval(make_calculation_request_with_value(dynamic({1.0, true, "x"})))
+        eval(make_thinknode_calc_request_with_value(dynamic({1.0, true, "x"})))
         == dynamic({1.0, true, "x"}));
 
     // reference
     REQUIRE(
-        eval(make_calculation_request_with_reference(
+        eval(make_thinknode_calc_request_with_reference(
             "5abd360900c0b14726b4ba1e6e5cdc12"))
         == dynamic(
             {{"demographics",
@@ -59,46 +68,47 @@ TEST_CASE("local calcs", "[local_calcs][ws]")
 
     // function
     REQUIRE(
-        eval(make_calculation_request_with_function(make_function_application(
-            "mgh",
-            "dosimetry",
-            "addition",
-            none,
-            {make_calculation_request_with_value(dynamic(2.0)),
-             make_calculation_request_with_value(dynamic(0.125))})))
+        eval(make_thinknode_calc_request_with_function(
+            make_thinknode_function_application(
+                "mgh",
+                "dosimetry",
+                "addition",
+                none,
+                {make_thinknode_calc_request_with_value(dynamic(2.0)),
+                 make_thinknode_calc_request_with_value(dynamic(0.125))})))
         == dynamic(2.125));
 
     // array
     REQUIRE(
-        eval(
-            make_calculation_request_with_array(make_calculation_array_request(
-                {make_calculation_request_with_value(dynamic(integer(2))),
-                 make_calculation_request_with_value(dynamic(integer(0))),
-                 make_calculation_request_with_value(dynamic(integer(3)))},
-                make_thinknode_type_info_with_integer_type(
-                    make_thinknode_integer_type()))))
+        eval(make_thinknode_calc_request_with_array(make_thinknode_array_calc(
+            {make_thinknode_calc_request_with_value(dynamic(integer(2))),
+             make_thinknode_calc_request_with_value(dynamic(integer(0))),
+             make_thinknode_calc_request_with_value(dynamic(integer(3)))},
+            make_thinknode_type_info_with_integer_type(
+                make_thinknode_integer_type()))))
         == dynamic({integer(2), integer(0), integer(3)}));
 
     // item
     REQUIRE(
-        eval(make_calculation_request_with_item(make_calculation_item_request(
-            make_calculation_request_with_value(
+        eval(make_thinknode_calc_request_with_item(make_thinknode_item_calc(
+            make_thinknode_calc_request_with_value(
                 dynamic({integer(2), integer(0), integer(3)})),
-            make_calculation_request_with_value(dynamic(integer(1))),
+            make_thinknode_calc_request_with_value(dynamic(integer(1))),
             make_thinknode_type_info_with_integer_type(
                 make_thinknode_integer_type()))))
         == dynamic(integer(0)));
 
     // object
     REQUIRE(
-        eval(make_calculation_request_with_object(
-            make_calculation_object_request(
+        eval(
+            make_thinknode_calc_request_with_object(make_thinknode_object_calc(
                 {{"two",
-                  make_calculation_request_with_value(dynamic(integer(2)))},
+                  make_thinknode_calc_request_with_value(dynamic(integer(2)))},
                  {"oh",
-                  make_calculation_request_with_value(dynamic(integer(0)))},
+                  make_thinknode_calc_request_with_value(dynamic(integer(0)))},
                  {"three",
-                  make_calculation_request_with_value(dynamic(integer(3)))}},
+                  make_thinknode_calc_request_with_value(
+                      dynamic(integer(3)))}},
                 make_thinknode_type_info_with_structure_type(
                     make_thinknode_structure_info(
                         {{"two",
@@ -124,28 +134,29 @@ TEST_CASE("local calcs", "[local_calcs][ws]")
 
     // property
     REQUIRE(
-        eval(make_calculation_request_with_property(
-            make_calculation_property_request(
-                make_calculation_request_with_value(dynamic(
+        eval(make_thinknode_calc_request_with_property(
+            make_thinknode_property_calc(
+                make_thinknode_calc_request_with_value(dynamic(
                     {{"two", integer(2)},
                      {"oh", integer(0)},
                      {"three", integer(3)}})),
-                make_calculation_request_with_value(dynamic("oh")),
+                make_thinknode_calc_request_with_value(dynamic("oh")),
                 make_thinknode_type_info_with_integer_type(
                     make_thinknode_integer_type()))))
         == dynamic(integer(0)));
 
     // let/variable
     REQUIRE(
-        eval(make_calculation_request_with_let(make_let_calculation_request(
-            {{"x", make_calculation_request_with_value(dynamic(integer(2)))}},
-            make_calculation_request_with_variable("x"))))
+        eval(make_thinknode_calc_request_with_let(make_thinknode_let_calc(
+            {{"x",
+              make_thinknode_calc_request_with_value(dynamic(integer(2)))}},
+            make_thinknode_calc_request_with_variable("x"))))
         == dynamic(integer(2)));
 
     // meta
     REQUIRE(
-        eval(make_calculation_request_with_meta(make_meta_calculation_request(
-            make_calculation_request_with_value(
+        eval(make_thinknode_calc_request_with_meta(make_thinknode_meta_calc(
+            make_thinknode_calc_request_with_value(
                 dynamic({{"value", integer(1)}})),
             make_thinknode_type_info_with_integer_type(
                 make_thinknode_integer_type()))))
@@ -153,10 +164,10 @@ TEST_CASE("local calcs", "[local_calcs][ws]")
 
     // cast
     REQUIRE(
-        eval(make_calculation_request_with_cast(make_calculation_cast_request(
+        eval(make_thinknode_calc_request_with_cast(make_thinknode_cast_request(
             make_thinknode_type_info_with_integer_type(
                 make_thinknode_integer_type()),
-            make_calculation_request_with_value(dynamic(0.0)))))
+            make_thinknode_calc_request_with_value(dynamic(0.0)))))
         == dynamic(integer(0)));
 }
 #endif

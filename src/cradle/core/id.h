@@ -189,6 +189,11 @@ struct captured_id
     {
         swap(a.id_, b.id_);
     }
+    size_t
+    hash() const
+    {
+        return id_ ? id_->hash() : 0;
+    }
 
  private:
     std::unique_ptr<id_interface> id_;

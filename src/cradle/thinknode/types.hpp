@@ -61,90 +61,90 @@ union thinknode_type_info
     thinknode_union_info union_type;
 };
 
-struct function_application;
-struct calculation_array_request;
-struct calculation_item_request;
-struct calculation_object_request;
-struct calculation_property_request;
-struct let_calculation_request;
-struct meta_calculation_request;
-struct calculation_cast_request;
+struct thinknode_function_application;
+struct thinknode_array_calc;
+struct thinknode_item_calc;
+struct thinknode_object_calc;
+struct thinknode_property_calc;
+struct thinknode_let_calc;
+struct thinknode_meta_calc;
+struct thinknode_cast_request;
 
 api(union)
-union calculation_request
+union thinknode_calc_request
 {
     std::string reference;
     dynamic value;
-    function_application function;
-    calculation_array_request array;
-    calculation_item_request item;
-    calculation_object_request object;
-    calculation_property_request property;
-    let_calculation_request let;
+    thinknode_function_application function;
+    thinknode_array_calc array;
+    thinknode_item_calc item;
+    thinknode_object_calc object;
+    thinknode_property_calc property;
+    thinknode_let_calc let;
     std::string variable;
-    meta_calculation_request meta;
-    calculation_cast_request cast;
+    thinknode_meta_calc meta;
+    thinknode_cast_request cast;
 };
 
 api(struct)
-struct function_application
+struct thinknode_function_application
 {
     std::string account;
     std::string app;
     std::string name;
     omissible<cradle::integer> level;
-    std::vector<cradle::calculation_request> args;
+    std::vector<cradle::thinknode_calc_request> args;
 };
 
 api(struct)
-struct calculation_array_request
+struct thinknode_array_calc
 {
-    std::vector<cradle::calculation_request> items;
+    std::vector<cradle::thinknode_calc_request> items;
     cradle::thinknode_type_info item_schema;
 };
 
 api(struct)
-struct calculation_object_request
+struct thinknode_object_calc
 {
-    std::map<std::string, cradle::calculation_request> properties;
+    std::map<std::string, cradle::thinknode_calc_request> properties;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct calculation_item_request
+struct thinknode_item_calc
 {
-    cradle::calculation_request array;
-    cradle::calculation_request index;
+    cradle::thinknode_calc_request array;
+    cradle::thinknode_calc_request index;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct calculation_property_request
+struct thinknode_property_calc
 {
-    cradle::calculation_request object;
-    cradle::calculation_request field;
+    cradle::thinknode_calc_request object;
+    cradle::thinknode_calc_request field;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct meta_calculation_request
+struct thinknode_meta_calc
 {
-    cradle::calculation_request generator;
+    cradle::thinknode_calc_request generator;
     cradle::thinknode_type_info schema;
 };
 
 api(struct)
-struct calculation_cast_request
+struct thinknode_cast_request
 {
     cradle::thinknode_type_info schema;
-    cradle::calculation_request object;
+    cradle::thinknode_calc_request object;
 };
 
 api(struct)
-struct let_calculation_request
+struct thinknode_let_calc
 {
-    std::map<std::string, cradle::calculation_request> variables;
-    cradle::calculation_request in;
+    std::map<std::string, cradle::thinknode_calc_request> variables;
+    cradle::thinknode_calc_request in;
 };
 
 // This describes an HTTP response with just an ID field.
@@ -180,7 +180,7 @@ api(struct)
 struct augmented_calculation_request
 {
     // the underlying request
-    cradle::calculation_request request;
+    cradle::thinknode_calc_request request;
     // any variables that should be reported on
     std::vector<std::string> reported_variables;
 };
@@ -505,13 +505,6 @@ union thinknode_provider_message
     std::string pong;
     dynamic result;
     thinknode_provider_failure failure;
-};
-
-api(struct)
-struct results_api_generated_request
-{
-    std::string context_id;
-    optional<calculation_request> request;
 };
 
 } // namespace cradle
