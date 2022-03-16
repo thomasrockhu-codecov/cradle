@@ -41,7 +41,8 @@ mock_http_connection::perform_request(
     {
         CRADLE_THROW(
             internal_check_failed()
-            << internal_error_message_info("unrecognized mock HTTP request"));
+            << internal_error_message_info("unrecognized mock HTTP request")
+            << attempted_http_request_info(request));
     }
     if (exchange != session_.script_.begin())
         session_.in_order_ = false;
