@@ -239,9 +239,22 @@ resolve_calc_to_iss_object(
     // for most of the cases here that require recursion.
     auto recurse = [&](calculation_request calc)
         -> cppcoro::task<thinknode_calc_request> {
-        co_return make_thinknode_calc_request_with_reference(
-            co_await resolve_calc_to_iss_object(
-                service, session, context_id, environment, std::move(calc)));
+        // Also, we want to avoid prematurely converting values to references.
+        if (is_value(calc))
+        {
+            co_return make_thinknode_calc_request_with_value(
+                as_value(std::move(calc)));
+        }
+        else
+        {
+            co_return make_thinknode_calc_request_with_reference(
+                co_await resolve_calc_to_iss_object(
+                    service,
+                    session,
+                    context_id,
+                    environment,
+                    std::move(calc)));
+        }
     };
 
     // post_calc() aids in posting the shallow form of the calculation.
