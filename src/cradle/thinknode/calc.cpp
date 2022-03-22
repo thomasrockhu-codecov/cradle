@@ -306,14 +306,17 @@ retrieve_calculation_request(
     service_core& service,
     thinknode_session session,
     string context_id,
-    string calc_id)
+    string calc_id,
+    tasklet_tracker* client = nullptr)
 {
+    // At this point, there could be multiple clients needing this request's
+    // result, but only one made it through to here.
     auto query = make_get_request(
         session.api_url + "/calc/" + calc_id + "?context=" + context_id,
         {{"Authorization", "Bearer " + session.access_token},
          {"Accept", "application/json"}});
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(service, query, client);
 
     co_return from_dynamic<thinknode_calc_request>(
         parse_json_response(response));
@@ -326,16 +329,22 @@ retrieve_calculation_request(
     service_core& service,
     thinknode_session session,
     string context_id,
-    string calc_id)
+    string calc_id,
+    tasklet_tracker* client)
 {
-    auto cache_key = make_sha256_hashed_id(
-        "retrieve_calculation_request", session.api_url, context_id, calc_id);
-
-    return fully_cached<thinknode_calc_request>(
-        service, cache_key, [=, &service] {
-            return uncached::retrieve_calculation_request(
-                service, session, context_id, calc_id);
-        });
+    string function_name{"retrieve_calculation_request"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, session.api_url, context_id, calc_id);
+    auto create_task = [=, &service] {
+        return uncached::retrieve_calculation_request(
+            service, session, context_id, calc_id, client);
+    };
+    return make_shared_task_for_cacheable<thinknode_calc_request>(
+        service,
+        std::move(cache_key),
+        create_task,
+        client,
+        std::move(function_name));
 }
 
 // Substitute the variables in a Thinknode request for new requests.

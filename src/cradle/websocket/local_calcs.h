@@ -1,6 +1,7 @@
 #ifndef CRADLE_WEBSOCKET_LOCAL_CALCS_H
 #define CRADLE_WEBSOCKET_LOCAL_CALCS_H
 
+#include <cradle/introspection/tasklet.h>
 #include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
 
@@ -14,7 +15,8 @@ perform_local_function_calc(
     string const& account,
     string const& app,
     string const& name,
-    std::vector<dynamic> args);
+    std::vector<dynamic> args,
+    tasklet_tracker* client = nullptr);
 
 cppcoro::task<dynamic>
 coerce_local_calc_result(

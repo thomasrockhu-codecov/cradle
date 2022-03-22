@@ -46,13 +46,16 @@ cppcoro::task<dynamic>
 perform_lambda_calc(
     service_core& service,
     lambda_function const& function,
-    std::vector<dynamic> args)
+    std::vector<dynamic> args,
+    tasklet_tracker* tasklet)
 {
+    string function_name{"lambda_calc"};
     auto cache_key = combine_ids(
-        make_id(string("lambda_calc")),
+        make_id(function_name),
         ref(*function.id),
         make_id(natively_encoded_sha256(args)));
 
+    auto await_guard = tasklet_await(tasklet, function_name, cache_key);
     co_return co_await cached<dynamic>(service, cache_key, [&] {
         return uncached::perform_lambda_calc(function, std::move(args));
     });
@@ -64,7 +67,8 @@ resolve_calc_to_iss_object(
     thinknode_session const& session,
     string const& context_id,
     std::map<string, calculation_request> const& environment,
-    calculation_request request);
+    calculation_request request,
+    tasklet_tracker* tasklet);
 
 cppcoro::task<dynamic>
 resolve_calc_to_value(
@@ -72,12 +76,18 @@ resolve_calc_to_value(
     thinknode_session const& session,
     string const& context_id,
     std::map<string, calculation_request> const& environment,
-    calculation_request request)
+    calculation_request request,
+    tasklet_tracker* tasklet)
 {
     auto recursive_call
         = [&](calculation_request request) -> cppcoro::task<dynamic> {
         return resolve_calc_to_value(
-            service, session, context_id, environment, std::move(request));
+            service,
+            session,
+            context_id,
+            environment,
+            std::move(request),
+            tasklet);
     };
     auto coercive_call = [&](thinknode_type_info const& schema,
                              dynamic value) -> cppcoro::task<dynamic> {
@@ -99,7 +109,7 @@ resolve_calc_to_value(
             for (auto& arg : lambda.args)
                 arg_values.push_back(co_await recursive_call(std::move(arg)));
             co_return co_await perform_lambda_calc(
-                service, lambda.function, std::move(arg_values));
+                service, lambda.function, std::move(arg_values), tasklet);
         }
         case calculation_request_tag::FUNCTION:
             // If the function is specifically requested to be executed
@@ -118,7 +128,8 @@ resolve_calc_to_value(
                         session,
                         context_id,
                         environment,
-                        std::move(request)));
+                        std::move(request),
+                        tasklet));
             }
             // Otherwise, we evaluate the function locally.
             else
@@ -138,7 +149,8 @@ resolve_calc_to_value(
                     function.account,
                     function.app,
                     function.name,
-                    std::move(arg_values));
+                    std::move(arg_values),
+                    tasklet);
             }
         case calculation_request_tag::ARRAY: {
             std::vector<dynamic> values;
@@ -193,7 +205,8 @@ resolve_calc_to_value(
                 session,
                 context_id,
                 extended_environment,
-                std::move(let.in));
+                std::move(let.in),
+                tasklet);
         }
         case calculation_request_tag::VARIABLE:
             co_return co_await recursive_call(
@@ -224,7 +237,8 @@ resolve_calc_to_iss_object(
     thinknode_session const& session,
     string const& context_id,
     std::map<string, calculation_request> const& environment,
-    calculation_request request)
+    calculation_request request,
+    tasklet_tracker* tasklet)
 {
     // For most calculation types, the resolution will be to convert the
     // calculation to a Thinknode calculation in "shallow form" (where all
@@ -241,7 +255,12 @@ resolve_calc_to_iss_object(
         -> cppcoro::task<thinknode_calc_request> {
         co_return make_thinknode_calc_request_with_reference(
             co_await resolve_calc_to_iss_object(
-                service, session, context_id, environment, std::move(calc)));
+                service,
+                session,
+                context_id,
+                environment,
+                std::move(calc),
+                tasklet));
     };
 
     // post_calc() aids in posting the shallow form of the calculation.
@@ -274,7 +293,8 @@ resolve_calc_to_iss_object(
                 session,
                 context_id,
                 environment,
-                std::move(request)));
+                std::move(request),
+                tasklet));
         }
         case calculation_request_tag::FUNCTION: {
             // If the function is specifically requested to be executed
@@ -289,7 +309,8 @@ resolve_calc_to_iss_object(
                     session,
                     context_id,
                     environment,
-                    std::move(request)));
+                    std::move(request),
+                    tasklet));
             }
             // Otherwise, we request Thinknode to evaluate it.
             else
@@ -350,7 +371,8 @@ resolve_calc_to_iss_object(
                 session,
                 context_id,
                 extended_environment,
-                std::move(let.in));
+                std::move(let.in),
+                tasklet);
         }
         case calculation_request_tag::VARIABLE:
             co_return co_await resolve_calc_to_iss_object(
@@ -358,7 +380,8 @@ resolve_calc_to_iss_object(
                 session,
                 context_id,
                 environment,
-                environment.at(as_variable(request)));
+                environment.at(as_variable(request)),
+                tasklet);
         case calculation_request_tag::META:
             co_return co_await post_calc(
                 make_thinknode_calc_request_with_meta(make_thinknode_meta_calc(
@@ -382,10 +405,11 @@ resolve_calc_to_value(
     service_core& service,
     thinknode_session const& session,
     string const& context_id,
-    calculation_request request)
+    calculation_request request,
+    tasklet_tracker* tasklet)
 {
     co_return co_await resolve_calc_to_value(
-        service, session, context_id, {}, std::move(request));
+        service, session, context_id, {}, std::move(request), tasklet);
 }
 
 cppcoro::task<std::string>
@@ -393,10 +417,11 @@ resolve_calc_to_iss_object(
     service_core& service,
     thinknode_session const& session,
     string const& context_id,
-    calculation_request request)
+    calculation_request request,
+    tasklet_tracker* tasklet)
 {
     co_return co_await resolve_calc_to_iss_object(
-        service, session, context_id, {}, std::move(request));
+        service, session, context_id, {}, std::move(request), tasklet);
 }
 
 calculation_request

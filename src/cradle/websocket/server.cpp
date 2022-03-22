@@ -45,6 +45,7 @@
 #include <cradle/encodings/yaml.h>
 #include <cradle/fs/app_dirs.h>
 #include <cradle/fs/file_io.h>
+#include <cradle/introspection/tasklet.h>
 #include <cradle/io/http_requests.hpp>
 #include <cradle/thinknode/apm.h>
 #include <cradle/thinknode/calc.h>
@@ -57,6 +58,7 @@
 #include <cradle/utilities/logging.h>
 #include <cradle/utilities/text.h>
 #include <cradle/websocket/calculations.h>
+#include <cradle/websocket/introspection.h>
 #include <cradle/websocket/messages.hpp>
 
 // Include this again because some #defines snuck in to overwrite some of our
@@ -1454,12 +1456,20 @@ static void
 send_response(
     websocket_server_impl& server,
     client_request const& request,
-    server_message_content const& content)
+    server_message_content const& content,
+    tasklet_tracker* tasklet)
 {
     {
         std::ostringstream os;
         os << "send_response " << request.message.content.type;
-        spdlog::get("cradle")->info(os.str());
+        if (tasklet)
+        {
+            tasklet->log(os.str());
+        }
+        else
+        {
+            spdlog::get("cradle")->info(os.str());
+        }
     }
     send(
         server,
@@ -1468,7 +1478,10 @@ send_response(
 }
 
 static cppcoro::task<>
-process_message(websocket_server_impl& server, client_request request)
+process_message(
+    websocket_server_impl& server,
+    client_request request,
+    tasklet_tracker* tasklet)
 {
     auto const& content = request.message.content;
     if (get_client(server.clients, request.client).session.api_url.empty()
@@ -1479,7 +1492,8 @@ process_message(websocket_server_impl& server, client_request request)
             server,
             request,
             make_server_message_content_with_error(
-                make_error_response_with_unregistered_client(nil)));
+                make_error_response_with_unregistered_client(nil)),
+            tasklet);
         co_return;
     }
     switch (get_tag(content))
@@ -1494,7 +1508,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_registration_acknowledgement(
-                    nil));
+                    nil),
+                tasklet);
             break;
         }
         case client_message_content_tag::TEST: {
@@ -1504,7 +1519,8 @@ process_message(websocket_server_impl& server, client_request request)
             send_response(
                 server,
                 request,
-                make_server_message_content_with_test(response));
+                make_server_message_content_with_test(response),
+                tasklet);
             break;
         }
         case client_message_content_tag::CACHE_INSERT: {
@@ -1515,7 +1531,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_cache_insert_acknowledgement(
-                    nil));
+                    nil),
+                tasklet);
             break;
         }
         case client_message_content_tag::CACHE_QUERY: {
@@ -1526,7 +1543,8 @@ process_message(websocket_server_impl& server, client_request request)
                 request,
                 make_server_message_content_with_cache_response(
                     make_websocket_cache_response(
-                        key, entry ? entry->value : none)));
+                        key, entry ? entry->value : none)),
+                tasklet);
             break;
         }
         case client_message_content_tag::ISS_OBJECT: {
@@ -1542,7 +1560,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_iss_object_response(
-                    iss_object_response{std::move(encoded_object)}));
+                    iss_object_response{std::move(encoded_object)}),
+                tasklet);
             break;
         }
         case client_message_content_tag::RESOLVE_ISS_OBJECT: {
@@ -1557,7 +1576,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_resolve_iss_object_response(
-                    resolve_iss_object_response{immutable_id}));
+                    resolve_iss_object_response{immutable_id}),
+                tasklet);
             break;
         }
         case client_message_content_tag::ISS_OBJECT_METADATA: {
@@ -1571,7 +1591,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_iss_object_metadata_response(
-                    iss_object_metadata_response{std::move(metadata)}));
+                    iss_object_metadata_response{std::move(metadata)}),
+                tasklet);
             break;
         }
         case client_message_content_tag::POST_ISS_OBJECT: {
@@ -1587,7 +1608,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_post_iss_object_response(
-                    make_post_iss_object_response(object_id)));
+                    make_post_iss_object_response(object_id)),
+                tasklet);
             break;
         }
         case client_message_content_tag::COPY_ISS_OBJECT: {
@@ -1606,8 +1628,8 @@ process_message(websocket_server_impl& server, client_request request)
             send_response(
                 server,
                 request,
-                make_server_message_content_with_copy_iss_object_response(
-                    nil));
+                make_server_message_content_with_copy_iss_object_response(nil),
+                tasklet);
             break;
         }
         case client_message_content_tag::COPY_CALCULATION: {
@@ -1627,7 +1649,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_copy_calculation_response(
-                    nil));
+                    nil),
+                tasklet);
             break;
         }
         case client_message_content_tag::CALCULATION_REQUEST: {
@@ -1636,12 +1659,14 @@ process_message(websocket_server_impl& server, client_request request)
                 server.core,
                 get_client(server.clients, request.client).session,
                 gcr.context_id,
-                gcr.calculation_id);
+                gcr.calculation_id,
+                tasklet);
             send_response(
                 server,
                 request,
                 make_server_message_content_with_calculation_request_response(
-                    make_calculation_request_response(calc)));
+                    make_calculation_request_response(calc)),
+                tasklet);
             break;
         }
         case client_message_content_tag::POST_CALCULATION: {
@@ -1655,7 +1680,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_post_calculation_response(
-                    make_post_calculation_response(calc_id)));
+                    make_post_calculation_response(calc_id)),
+                tasklet);
             break;
         }
         case client_message_content_tag::ISS_DIFF: {
@@ -1670,7 +1696,8 @@ process_message(websocket_server_impl& server, client_request request)
             send_response(
                 server,
                 request,
-                make_server_message_content_with_iss_diff_response(diff));
+                make_server_message_content_with_iss_diff_response(diff),
+                tasklet);
             break;
         }
         case client_message_content_tag::CALCULATION_SEARCH: {
@@ -1685,7 +1712,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_calculation_search_response(
-                    make_calculation_search_response(matches)));
+                    make_calculation_search_response(matches)),
+                tasklet);
             break;
         }
         case client_message_content_tag::CALCULATION_DIFF: {
@@ -1701,7 +1729,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_calculation_diff_response(
-                    diff));
+                    diff),
+                tasklet);
             break;
         }
         case client_message_content_tag::RESOLVE_META_CHAIN: {
@@ -1719,7 +1748,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_resolve_meta_chain_response(
-                    make_resolve_meta_chain_response(calc_id)));
+                    make_resolve_meta_chain_response(calc_id)),
+                tasklet);
             break;
         }
         case client_message_content_tag::PERFORM_LOCAL_CALC: {
@@ -1728,11 +1758,13 @@ process_message(websocket_server_impl& server, client_request request)
                 server.core,
                 get_client(server.clients, request.client).session,
                 pc.context_id,
-                pc.calculation);
+                pc.calculation,
+                tasklet);
             send_response(
                 server,
                 request,
-                make_server_message_content_with_local_calc_result(result));
+                make_server_message_content_with_local_calc_result(result),
+                tasklet);
             break;
         }
         case client_message_content_tag::RESULTS_API_QUERY: {
@@ -1748,7 +1780,8 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_results_api_response(
-                    make_results_api_response(result)));
+                    make_results_api_response(result)),
+                tasklet);
             break;
         }
         case client_message_content_tag::LOCAL_RESULTS_API_QUERY: {
@@ -1764,7 +1797,31 @@ process_message(websocket_server_impl& server, client_request request)
                 server,
                 request,
                 make_server_message_content_with_local_results_api_response(
-                    make_local_results_api_response(result)));
+                    make_local_results_api_response(result)),
+                tasklet);
+            break;
+        }
+        case client_message_content_tag::INTROSPECTION_CONTROL: {
+            auto const& ic = as_introspection_control(content);
+            introspection_control(ic);
+            send_response(
+                server,
+                request,
+                make_server_message_content_with_introspection_control_response(
+                    nil),
+                tasklet);
+            break;
+        }
+        case client_message_content_tag::INTROSPECTION_STATUS_QUERY: {
+            auto const& isq = as_introspection_status_query(content);
+            auto response
+                = make_introspection_status_response(isq.include_finished);
+            send_response(
+                server,
+                request,
+                make_server_message_content_with_introspection_status_response(
+                    response),
+                tasklet);
             break;
         }
         default:
@@ -1776,11 +1833,14 @@ process_message(websocket_server_impl& server, client_request request)
 
 static cppcoro::task<>
 process_message_with_error_handling(
-    websocket_server_impl& server, client_request request)
+    websocket_server_impl& server,
+    client_request request,
+    tasklet_tracker* tasklet)
 {
+    tasklet_run tasklet_run(tasklet);
     try
     {
-        co_await process_message(server, request);
+        co_await process_message(server, request, tasklet);
     }
     catch (bad_http_status_code& e)
     {
@@ -1793,7 +1853,8 @@ process_message_with_error_handling(
                     make_http_failure_info(
                         get_required_error_info<attempted_http_request_info>(
                             e),
-                        get_required_error_info<http_response_info>(e)))));
+                        get_required_error_info<http_response_info>(e)))),
+            tasklet);
     }
     catch (std::exception& e)
     {
@@ -1802,7 +1863,8 @@ process_message_with_error_handling(
             server,
             request,
             make_server_message_content_with_error(
-                make_error_response_with_unknown(e.what())));
+                make_error_response_with_unknown(e.what())),
+            tasklet);
     }
     co_return;
 }
@@ -1845,10 +1907,15 @@ on_message(
         }
         else
         {
+            std::ostringstream os;
+            os << "websocket: " << get_tag(message.content);
+            auto tasklet = create_tasklet_tracker("server", os.str());
             server.async_scope.spawn(schedule_on(
                 server.pool,
                 process_message_with_error_handling(
-                    server, client_request{hdl, std::move(message)})));
+                    server,
+                    client_request{hdl, std::move(message)},
+                    std::move(tasklet))));
         }
     }
     catch (std::exception& e)

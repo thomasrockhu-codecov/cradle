@@ -4,6 +4,7 @@
 #include <cppcoro/async_generator.hpp>
 
 #include <cradle/core.h>
+#include <cradle/introspection/tasklet.h>
 #include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
 
@@ -56,7 +57,8 @@ retrieve_calculation_request(
     service_core& service,
     thinknode_session session,
     string context_id,
-    string calc_id);
+    string calc_id,
+    tasklet_tracker* client = nullptr);
 
 // Substitute the variables in a Thinknode request for new requests.
 thinknode_calc_request

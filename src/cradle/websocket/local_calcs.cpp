@@ -47,15 +47,20 @@ perform_local_function_calc(
     string const& account,
     string const& app,
     string const& name,
-    std::vector<dynamic> args)
+    std::vector<dynamic> args,
+    tasklet_tracker* client)
 {
     auto const version_info = co_await resolve_context_app(
         service, session, context_id, account, app);
     auto const image = as_private(*version_info.manifest->provider).image;
 
+    auto pool_name = std::string{"local@"} + app;
+    auto tasklet = create_tasklet_tracker(pool_name, "local calc", client);
     co_await get_local_compute_pool_for_image(
         service, std::make_pair(app, image))
         .schedule();
+
+    auto run_guard = tasklet_run(tasklet);
     co_return supervise_thinknode_calculation(
         service, account, app, image, name, std::move(args));
 }
@@ -70,7 +75,8 @@ perform_local_function_calc(
     string const& account,
     string const& app,
     string const& name,
-    std::vector<dynamic> args)
+    std::vector<dynamic> args,
+    tasklet_tracker* client)
 {
     auto cache_key = make_sha256_hashed_id(
         "local_function_calc",
@@ -81,10 +87,20 @@ perform_local_function_calc(
         name,
         map(CRADLE_LAMBDIFY(natively_encoded_sha256), args));
 
-    co_return co_await fully_cached<dynamic>(service, cache_key, [&] {
+    tasklet_await around_await(
+        client, "perform_local_function_calc", cache_key);
+    auto result = co_await fully_cached<dynamic>(service, cache_key, [&] {
         return uncached::perform_local_function_calc(
-            service, session, context_id, account, app, name, std::move(args));
+            service,
+            session,
+            context_id,
+            account,
+            app,
+            name,
+            std::move(args),
+            client);
     });
+    co_return result;
 }
 
 cppcoro::task<dynamic>

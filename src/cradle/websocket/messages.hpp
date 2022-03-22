@@ -254,6 +254,19 @@ struct local_results_api_response
 };
 
 api(union)
+union introspection_control_request
+{
+    bool on_off;
+    nil_t clear_admin;
+};
+
+api(struct)
+struct introspection_status_request
+{
+    bool include_finished;
+};
+
+api(union)
 union client_message_content
 {
     cradle::nil_t kill;
@@ -276,6 +289,8 @@ union client_message_content
     cradle::post_calculation_request perform_local_calc;
     cradle::results_api_query results_api_query;
     cradle::results_api_query local_results_api_query;
+    cradle::introspection_control_request introspection_control;
+    cradle::introspection_status_request introspection_status_query;
 };
 
 api(struct)
@@ -302,6 +317,31 @@ union error_response
     std::string unknown;
 };
 
+api(struct)
+struct tasklet_msg_event
+{
+    integer when; // Milliseconds since epoch
+    std::string what;
+    std::string details;
+};
+
+api(struct)
+struct tasklet_overview
+{
+    std::string pool_name;
+    int tasklet_id;
+    omissible<integer> client_id;
+    std::string description;
+    std::vector<tasklet_msg_event> events;
+};
+
+api(struct)
+struct introspection_status_response
+{
+    integer now; // Milliseconds since epoch
+    std::vector<tasklet_overview> tasklets;
+};
+
 api(union)
 union server_message_content
 {
@@ -325,6 +365,8 @@ union server_message_content
     cradle::dynamic local_calc_result;
     cradle::results_api_response results_api_response;
     cradle::local_results_api_response local_results_api_response;
+    nil_t introspection_control_response;
+    cradle::introspection_status_response introspection_status_response;
 };
 
 api(struct)
