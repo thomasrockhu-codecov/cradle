@@ -64,6 +64,10 @@ class tasklet_tracker
     virtual void
     log(std::string const& msg)
         = 0;
+
+    virtual void
+    log(char const* msg)
+        = 0;
 };
 
 /**

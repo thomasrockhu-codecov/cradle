@@ -104,6 +104,12 @@ tasklet_impl::remove_event(tasklet_event_type what)
 void
 tasklet_impl::log(std::string const& msg)
 {
+    log(msg.c_str());
+}
+
+void
+tasklet_impl::log(char const* msg)
+{
     if (tasklet_admin::instance().logging_enabled())
     {
         std::ostringstream s;

@@ -6,8 +6,8 @@
 namespace cradle {
 
 template<typename TimePoint>
-static auto
-to_millis(TimePoint time_point) -> TimePoint::rep
+static decltype(auto)
+to_millis(TimePoint time_point)
 {
     auto duration = duration_cast<std::chrono::milliseconds>(
         time_point.time_since_epoch());

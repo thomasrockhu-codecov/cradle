@@ -74,6 +74,9 @@ class tasklet_impl : public tasklet_tracker
     void
     log(std::string const& msg) override;
 
+    void
+    log(char const* msg) override;
+
     std::string const&
     pool_name() const
     {

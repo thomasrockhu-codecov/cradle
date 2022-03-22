@@ -19,19 +19,16 @@ get_local_compute_pool_for_image(
 
 cppcoro::task<dynamic>
 perform_local_function_calc(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     string const& account,
     string const& app,
     string const& name,
-    std::vector<dynamic> args,
-    tasklet_tracker* client = nullptr);
+    std::vector<dynamic> args);
 
 cppcoro::task<dynamic>
 coerce_local_calc_result(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     thinknode_type_info const& schema,
     dynamic value);

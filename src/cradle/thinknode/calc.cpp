@@ -87,8 +87,7 @@ namespace uncached {
 
 cppcoro::task<string>
 post_calculation(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     thinknode_calc_request request)
 {
@@ -96,19 +95,19 @@ post_calculation(
         co_return as_reference(request);
 
     auto request_iss_id = co_await post_iss_object(
-        service,
-        session,
+        trc,
         context_id,
         make_thinknode_type_info_with_dynamic_type(thinknode_dynamic_type()),
         to_dynamic(sanitize_request(request)));
 
     auto query = make_http_request(
         http_request_method::POST,
-        session.api_url + "/calc/" + request_iss_id + "?context=" + context_id,
-        {{"Authorization", "Bearer " + session.access_token}},
+        trc.session.api_url + "/calc/" + request_iss_id
+            + "?context=" + context_id,
+        {{"Authorization", "Bearer " + trc.session.access_token}},
         blob());
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(trc, query);
 
     co_return from_dynamic<id_response>(parse_json_response(response)).id;
 }
@@ -117,17 +116,15 @@ post_calculation(
 
 cppcoro::shared_task<string>
 post_calculation(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     thinknode_calc_request request)
 {
     auto cache_key = make_sha256_hashed_id(
-        "post_calculation", session.api_url, context_id, request);
+        "post_calculation", trc.session.api_url, context_id, request);
 
-    return fully_cached<string>(service, cache_key, [=, &service] {
-        return uncached::post_calculation(
-            service, session, context_id, request);
+    return fully_cached<string>(trc.service, cache_key, [=] {
+        return uncached::post_calculation(trc, context_id, request);
     });
 }
 
@@ -246,31 +243,25 @@ calc_status_as_query_string(calculation_status status)
 
 cppcoro::task<calculation_status>
 query_calculation_status(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string calc_id)
+    thinknode_request_context trc, string context_id, string calc_id)
 {
     auto query = make_get_request(
-        session.api_url + "/calc/" + calc_id + "/status?context=" + context_id,
-        {{"Authorization", "Bearer " + session.access_token},
+        trc.session.api_url + "/calc/" + calc_id
+            + "/status?context=" + context_id,
+        {{"Authorization", "Bearer " + trc.session.access_token},
          {"Accept", "application/json"}});
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(trc, query);
 
     co_return from_dynamic<calculation_status>(parse_json_response(response));
 }
 
 cppcoro::async_generator<calculation_status>
 long_poll_calculation_status(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string calc_id)
+    thinknode_request_context trc, string context_id, string calc_id)
 {
     // Query the initial status.
-    auto status = co_await query_calculation_status(
-        service, session, context_id, calc_id);
+    auto status = co_await query_calculation_status(trc, context_id, calc_id);
 
     while (true)
     {
@@ -285,14 +276,13 @@ long_poll_calculation_status(
         // Long poll for that status and update :status with whatever Thinknode
         // reports back.
         auto long_poll_request = make_get_request(
-            session.api_url + "/calc/" + calc_id + "/status?"
+            trc.session.api_url + "/calc/" + calc_id + "/status?"
                 + calc_status_as_query_string(*next_status) + "&timeout=120"
                 + "&context=" + context_id,
-            {{"Authorization", "Bearer " + session.access_token},
+            {{"Authorization", "Bearer " + trc.session.access_token},
              {"Accept", "application/json"}});
 
-        auto response
-            = co_await async_http_request(service, long_poll_request);
+        auto response = co_await async_http_request(trc, long_poll_request);
 
         status
             = from_dynamic<calculation_status>(parse_json_response(response));
@@ -303,20 +293,16 @@ namespace uncached {
 
 cppcoro::task<thinknode_calc_request>
 retrieve_calculation_request(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string calc_id,
-    tasklet_tracker* client = nullptr)
+    thinknode_request_context trc, string context_id, string calc_id)
 {
     // At this point, there could be multiple clients needing this request's
     // result, but only one made it through to here.
     auto query = make_get_request(
-        session.api_url + "/calc/" + calc_id + "?context=" + context_id,
-        {{"Authorization", "Bearer " + session.access_token},
+        trc.session.api_url + "/calc/" + calc_id + "?context=" + context_id,
+        {{"Authorization", "Bearer " + trc.session.access_token},
          {"Accept", "application/json"}});
 
-    auto response = co_await async_http_request(service, query, client);
+    auto response = co_await async_http_request(trc, std::move(query));
 
     co_return from_dynamic<thinknode_calc_request>(
         parse_json_response(response));
@@ -326,24 +312,20 @@ retrieve_calculation_request(
 
 cppcoro::shared_task<thinknode_calc_request>
 retrieve_calculation_request(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string calc_id,
-    tasklet_tracker* client)
+    thinknode_request_context trc, string context_id, string calc_id)
 {
     string function_name{"retrieve_calculation_request"};
     auto cache_key = make_captured_sha256_hashed_id(
-        function_name, session.api_url, context_id, calc_id);
-    auto create_task = [=, &service] {
+        function_name, trc.session.api_url, context_id, calc_id);
+    auto create_task = [=]() {
         return uncached::retrieve_calculation_request(
-            service, session, context_id, calc_id, client);
+            trc, std::move(context_id), std::move(calc_id));
     };
     return make_shared_task_for_cacheable<thinknode_calc_request>(
-        service,
+        trc.service,
         std::move(cache_key),
         create_task,
-        client,
+        trc.tasklet,
         std::move(function_name));
 }
 
@@ -509,9 +491,8 @@ submit_thinknode_let_calc(
 
 static cppcoro::task<void>
 search_calculation(
-    service_core& service,
+    thinknode_request_context trc,
     std::map<string, bool>& is_matching,
-    thinknode_session session,
     string context_id,
     string calculation_id,
     string search_string)
@@ -525,7 +506,7 @@ search_calculation(
     try
     {
         request = co_await retrieve_calculation_request(
-            service, session, context_id, calculation_id);
+            trc, context_id, calculation_id);
     }
     catch (bad_http_status_code& e)
     {
@@ -552,12 +533,7 @@ search_calculation(
             if (get_thinknode_service_id(ref) == thinknode_service_id::CALC)
             {
                 co_await search_calculation(
-                    service,
-                    is_matching,
-                    session,
-                    context_id,
-                    ref,
-                    search_string);
+                    trc, is_matching, context_id, ref, search_string);
             }
         }
     };
@@ -619,8 +595,7 @@ search_calculation(
 
 cppcoro::task<std::vector<string>>
 search_calculation(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     string calculation_id,
     string search_string)
@@ -630,12 +605,7 @@ search_calculation(
     std::map<string, bool> is_matching;
 
     co_await search_calculation(
-        service,
-        is_matching,
-        session,
-        context_id,
-        calculation_id,
-        search_string);
+        trc, is_matching, context_id, calculation_id, search_string);
 
     // Extract the matching calculation IDs.
     std::vector<string> matches;

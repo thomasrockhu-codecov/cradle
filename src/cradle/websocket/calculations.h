@@ -44,19 +44,15 @@ make_function(Function&& function)
 
 cppcoro::task<dynamic>
 resolve_calc_to_value(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
-    calculation_request request,
-    tasklet_tracker* tasklet = nullptr);
+    calculation_request request);
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
-    calculation_request request,
-    tasklet_tracker* tasklet = nullptr);
+    calculation_request request);
 
 calculation_request
 as_generic_calc(thinknode_calc_request const& request);

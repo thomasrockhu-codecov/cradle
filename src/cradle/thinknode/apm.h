@@ -11,11 +11,7 @@ struct http_connection_interface;
 // Query a particular version of an app.
 cppcoro::shared_task<thinknode_app_version_info>
 get_app_version_info(
-    service_core& service,
-    thinknode_session session,
-    string account,
-    string app,
-    string version);
+    thinknode_request_context trc, string account, string app, string version);
 
 } // namespace cradle
 

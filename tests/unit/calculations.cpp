@@ -110,9 +110,10 @@ TEST_CASE("individual calcs", "[calcs][ws]")
     session.access_token
         = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
 
+    thinknode_request_context trc{core, session, nullptr};
     auto eval = [&](calculation_request const& request) {
         return cppcoro::sync_wait(resolve_calc_to_value(
-            core, session, "5dadeb4a004073e81b5e096255e83652", request));
+            trc, "5dadeb4a004073e81b5e096255e83652", request));
     };
 
     // value
@@ -277,9 +278,10 @@ TEST_CASE("lambda calc caching", "[calcs][ws]")
         return cast<double>(args.at(0)) + cast<double>(args.at(1));
     });
 
+    thinknode_request_context trc{core, session, nullptr};
     auto eval = [&](calculation_request const& request) {
         return cppcoro::sync_wait(resolve_calc_to_value(
-            core, session, "5dadeb4a004073e81b5e096255e83652", request));
+            trc, "5dadeb4a004073e81b5e096255e83652", request));
     };
 
     REQUIRE(
@@ -317,9 +319,10 @@ TEST_CASE("mixed calcs", "[calcs][ws]")
     session.access_token
         = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
 
+    thinknode_request_context trc{core, session, nullptr};
     auto eval = [&](calculation_request const& request) {
         return cppcoro::sync_wait(resolve_calc_to_value(
-            core, session, "5dadeb4a004073e81b5e096255e83652", request));
+            trc, "5dadeb4a004073e81b5e096255e83652", request));
     };
 
 #ifdef LOCAL_DOCKER_TESTING

@@ -174,6 +174,7 @@ struct client_request
 {
     connection_hdl client;
     websocket_client_message message;
+    tasklet_tracker* tasklet;
 };
 
 struct websocket_server_impl
@@ -232,8 +233,7 @@ encode_object(output_data_encoding encoding, blob const& msgpack_data)
 
 cppcoro::shared_task<dynamic>
 get_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     string object_id,
     bool ignore_upgrades)
@@ -243,16 +243,14 @@ get_iss_object(
         << CRADLE_LOG_ARG(ignore_upgrades));
 
     auto immutable_id = co_await resolve_iss_object_to_immutable(
-        service, session, context_id, object_id, ignore_upgrades);
+        trc, context_id, object_id, ignore_upgrades);
 
-    co_return co_await retrieve_immutable(
-        service, session, context_id, immutable_id);
+    co_return co_await retrieve_immutable(trc, context_id, immutable_id);
 }
 
 cppcoro::shared_task<blob>
 get_iss_blob(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     string object_id,
     bool ignore_upgrades)
@@ -262,21 +260,19 @@ get_iss_blob(
         << CRADLE_LOG_ARG(ignore_upgrades));
 
     auto immutable_id = co_await resolve_iss_object_to_immutable(
-        service, session, context_id, object_id, ignore_upgrades);
+        trc, context_id, object_id, ignore_upgrades);
 
-    co_return co_await retrieve_immutable_blob(
-        service, session, context_id, immutable_id);
+    co_return co_await retrieve_immutable_blob(trc, context_id, immutable_id);
 }
 
 cppcoro::task<thinknode_app_version_info>
 resolve_context_app(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     string account,
     string app)
 {
-    auto context = co_await get_context_contents(service, session, context_id);
+    auto context = co_await get_context_contents(trc, context_id);
     for (auto const& app_info : context.contents)
     {
         if (app_info.account == account && app_info.app == app)
@@ -288,7 +284,7 @@ resolve_context_app(
                         "apps must be installed as versions"));
             }
             co_return co_await get_app_version_info(
-                service, session, account, app, as_version(app_info.source));
+                trc, account, app, as_version(app_info.source));
         }
     }
     CRADLE_THROW(
@@ -300,13 +296,12 @@ namespace uncached {
 
 cppcoro::task<api_type_info>
 resolve_named_type_reference(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     api_named_type_reference ref)
 {
     auto version_info = co_await resolve_context_app(
-        service, session, context_id, get_account_name(session), ref.app);
+        trc, context_id, get_account_name(trc.session), ref.app);
     for (auto const& type : version_info.manifest->types)
     {
         if (type.name == ref.name)
@@ -323,17 +318,15 @@ resolve_named_type_reference(
 
 cppcoro::shared_task<api_type_info>
 resolve_named_type_reference(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     api_named_type_reference ref)
 {
     auto cache_key = make_sha256_hashed_id(
-        "resolve_named_type_reference", session.api_url, context_id, ref);
+        "resolve_named_type_reference", trc.session.api_url, context_id, ref);
 
-    return fully_cached<api_type_info>(service, cache_key, [=, &service] {
-        return uncached::resolve_named_type_reference(
-            service, session, context_id, ref);
+    return fully_cached<api_type_info>(trc.service, cache_key, [=] {
+        return uncached::resolve_named_type_reference(trc, context_id, ref);
     });
 }
 
@@ -343,8 +336,7 @@ namespace uncached {
 // and encode it again as msgpack.
 static cppcoro::task<blob>
 coerce_encoded_object(
-    service_core& core,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     thinknode_type_info schema,
     input_data_encoding encoding,
@@ -378,7 +370,7 @@ coerce_encoded_object(
         [&](api_named_type_reference const& ref)
             -> cppcoro::task<api_type_info> {
             co_return co_await cradle::resolve_named_type_reference(
-                core, session, context_id, ref);
+                trc, context_id, ref);
         },
         as_api_type(schema),
         std::move(decoded_object));
@@ -392,8 +384,7 @@ coerce_encoded_object(
 
 static cppcoro::shared_task<blob>
 coerce_encoded_object(
-    service_core& core,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     thinknode_type_info schema,
     input_data_encoding encoding,
@@ -407,39 +398,32 @@ coerce_encoded_object(
 
     auto cache_key = make_sha256_hashed_id(
         "coerce_encoded_object",
-        session.api_url,
+        trc.session.api_url,
         context_id,
         schema,
         encoding,
         data_hash);
 
-    return fully_cached<blob>(core, cache_key, [=, &core] {
+    return fully_cached<blob>(trc.service, cache_key, [=] {
         return uncached::coerce_encoded_object(
-            core, session, context_id, schema, encoding, encoded_object);
+            trc, context_id, schema, encoding, encoded_object);
     });
 }
 
 static cppcoro::task<string>
 post_iss_object(
-    service_core& core,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     thinknode_type_info schema,
     input_data_encoding encoding,
     blob encoded_object)
 {
     auto coerced_object = co_await coerce_encoded_object(
-        core,
-        session,
-        context_id,
-        schema,
-        encoding,
-        std::move(encoded_object));
+        trc, context_id, schema, encoding, std::move(encoded_object));
 
-    spdlog::get("cradle")->info("post_iss_object: posting");
+    log_info(trc, "post_iss_object: posting");
     co_return co_await post_iss_object(
-        core,
-        std::move(session),
+        trc,
         std::move(context_id),
         std::move(schema),
         std::move(coerced_object));
@@ -447,9 +431,8 @@ post_iss_object(
 
 cppcoro::task<bool>
 type_contains_references(
-    service_core& service,
+    thinknode_request_context trc,
     std::set<api_type_info>& already_visited,
-    thinknode_session const& session,
     string const& context_id,
     api_type_info const& type);
 
@@ -457,15 +440,14 @@ namespace uncached {
 
 cppcoro::task<bool>
 type_contains_references(
-    service_core& service,
+    thinknode_request_context trc,
     std::set<api_type_info>& already_visited,
-    thinknode_session const& session,
     string const& context_id,
     api_type_info const& type)
 {
     auto recurse = [&](api_type_info const& type) -> cppcoro::task<bool> {
         return cradle::type_contains_references(
-            service, already_visited, session, context_id, type);
+            trc, already_visited, context_id, type);
     };
 
     switch (get_tag(type))
@@ -498,7 +480,7 @@ type_contains_references(
         case api_type_info_tag::NAMED_TYPE:
             co_return co_await recurse(
                 co_await cradle::resolve_named_type_reference(
-                    service, session, context_id, as_named_type(type)));
+                    trc, context_id, as_named_type(type)));
         case api_type_info_tag::NIL_TYPE:
         default:
             co_return false;
@@ -533,9 +515,8 @@ type_contains_references(
 
 cppcoro::task<bool>
 type_contains_references(
-    service_core& service,
+    thinknode_request_context trc,
     std::set<api_type_info>& already_visited,
-    thinknode_session const& session,
     string const& context_id,
     api_type_info const& type)
 {
@@ -553,18 +534,17 @@ type_contains_references(
     already_visited.insert(type);
 
     auto cache_key = make_sha256_hashed_id(
-        "type_contains_references", session.api_url, context_id, type);
+        "type_contains_references", trc.session.api_url, context_id, type);
 
-    co_return co_await fully_cached<bool>(service, cache_key, [&] {
+    co_return co_await fully_cached<bool>(trc.service, cache_key, [&] {
         return uncached::type_contains_references(
-            service, already_visited, session, context_id, type);
+            trc, already_visited, context_id, type);
     });
 }
 
 cppcoro::task<nil_t>
 visit_object_references(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     api_type_info const& type,
     dynamic const& value,
@@ -576,8 +556,7 @@ visit_object_references(
 
     auto recurse = [&](api_type_info const& type,
                        dynamic const& value) -> cppcoro::task<nil_t> {
-        return visit_object_references(
-            service, session, context_id, type, value, visitor);
+        return visit_object_references(trc, context_id, type, value, visitor);
     };
 
     switch (get_tag(type))
@@ -617,7 +596,7 @@ visit_object_references(
         }
         case api_type_info_tag::NAMED_TYPE: {
             auto type_info = co_await resolve_named_type_reference(
-                service, session, context_id, as_named_type(type));
+                trc, context_id, as_named_type(type));
             co_await recurse(type_info, value);
             break;
         }
@@ -675,8 +654,7 @@ visit_object_references(
 
 cppcoro::task<nil_t>
 deeply_copy_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string source_bucket,
     string source_context_id,
     string destination_context_id,
@@ -686,8 +664,7 @@ namespace uncached {
 
 cppcoro::task<nil_t>
 deeply_copy_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string source_bucket,
     string source_context_id,
     string destination_context_id,
@@ -708,33 +685,26 @@ deeply_copy_iss_object(
     // Copy the object itself.
     auto [_, metadata] = co_await cppcoro::when_all(
         shallowly_copy_iss_object(
-            service,
-            session,
-            source_bucket,
-            destination_context_id,
-            object_id),
-        get_iss_object_metadata(
-            service, session, source_context_id, object_id));
+            trc, source_bucket, destination_context_id, object_id),
+        get_iss_object_metadata(trc, source_context_id, object_id));
 
     auto object_type
         = as_api_type(parse_url_type_string(metadata["Thinknode-Type"]));
 
     std::set<api_type_info> already_visited;
     if (co_await cradle::type_contains_references(
-            service, already_visited, session, source_context_id, object_type))
+            trc, already_visited, source_context_id, object_type))
     {
-        auto object = co_await get_iss_object(
-            service, session, source_context_id, object_id);
+        auto object
+            = co_await get_iss_object(trc, source_context_id, object_id);
         co_await visit_object_references(
-            service,
-            session,
+            trc,
             source_context_id,
             object_type,
             object,
             [&](string const& ref) -> cppcoro::task<nil_t> {
                 co_return co_await cradle::deeply_copy_iss_object(
-                    service,
-                    session,
+                    trc,
                     source_bucket,
                     source_context_id,
                     destination_context_id,
@@ -749,8 +719,7 @@ deeply_copy_iss_object(
 
 cppcoro::task<nil_t>
 deeply_copy_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string source_bucket,
     string source_context_id,
     string destination_context_id,
@@ -762,15 +731,14 @@ deeply_copy_iss_object(
 
     auto cache_key = make_sha256_hashed_id(
         "deeply_copy_iss_object",
-        session.api_url,
+        trc.session.api_url,
         source_context_id,
         destination_context_id,
         object_id);
 
-    co_return co_await fully_cached<nil_t>(service, cache_key, [&] {
+    co_return co_await fully_cached<nil_t>(trc.service, cache_key, [&] {
         return uncached::deeply_copy_iss_object(
-            service,
-            session,
+            trc,
             source_bucket,
             source_context_id,
             destination_context_id,
@@ -780,16 +748,14 @@ deeply_copy_iss_object(
 
 cppcoro::task<nil_t>
 visit_calc_references(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     thinknode_calc_request const& request,
     function_view<cppcoro::task<nil_t>(string const& ref)> const& visitor)
 {
     auto recurse
         = [&](thinknode_calc_request const& request) -> cppcoro::task<nil_t> {
-        return visit_calc_references(
-            service, session, context_id, request, visitor);
+        return visit_calc_references(trc, context_id, request, visitor);
     };
 
     switch (get_tag(request))
@@ -846,8 +812,7 @@ visit_calc_references(
 
 cppcoro::task<nil_t>
 deeply_copy_calculation(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string source_bucket,
     string source_context_id,
     string destination_context_id,
@@ -857,8 +822,7 @@ namespace uncached {
 
 cppcoro::task<nil_t>
 deeply_copy_calculation(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string source_bucket,
     string source_context_id,
     string destination_context_id,
@@ -879,8 +843,13 @@ deeply_copy_calculation(
         // context to see if it already exists there.
         try
         {
+            // Moving the following line inside the
+            // retrieve_calculation_request() call seems to cause a crash.
+            // #170 again?
             calculation = co_await retrieve_calculation_request(
-                service, session, destination_context_id, object_id);
+                trc,
+                destination_context_id,
+                object_id);
             found_at_destination = true;
             copy_needed = false;
         }
@@ -898,21 +867,19 @@ deeply_copy_calculation(
         if (!found_at_destination)
         {
             calculation = co_await retrieve_calculation_request(
-                service, session, source_context_id, object_id);
+                trc, source_context_id, object_id);
         }
 
         // Even if the calculation already exists at the destination, it's
         // possible that the arguments aren't entirely there, so we still need
         // to proceed recursively.
         co_await visit_calc_references(
-            service,
-            session,
+            trc,
             destination_context_id,
             calculation,
             [&](string const& ref) -> cppcoro::task<nil_t> {
                 return cradle::deeply_copy_calculation(
-                    service,
-                    session,
+                    trc,
                     source_bucket,
                     source_context_id,
                     destination_context_id,
@@ -923,8 +890,7 @@ deeply_copy_calculation(
     if (copy_needed)
     {
         co_await cradle::deeply_copy_iss_object(
-            service,
-            session,
+            trc,
             source_bucket,
             source_context_id,
             destination_context_id,
@@ -938,8 +904,7 @@ deeply_copy_calculation(
 
 cppcoro::task<nil_t>
 deeply_copy_calculation(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string source_bucket,
     string source_context_id,
     string destination_context_id,
@@ -952,15 +917,14 @@ deeply_copy_calculation(
 
     auto cache_key = make_sha256_hashed_id(
         "deeply_copy_calculation",
-        session.api_url,
+        trc.session.api_url,
         source_context_id,
         destination_context_id,
         calculation_id);
 
-    co_return co_await fully_cached<nil_t>(service, cache_key, [&] {
+    co_return co_await fully_cached<nil_t>(trc.service, cache_key, [&] {
         return uncached::deeply_copy_calculation(
-            service,
-            session,
+            trc,
             source_bucket,
             source_context_id,
             destination_context_id,
@@ -991,8 +955,7 @@ is_iss_id(dynamic const& value)
 
 cppcoro::task<object_tree_diff>
 compute_iss_tree_diff(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id_a,
     string object_id_a,
     string context_id_b,
@@ -1000,8 +963,7 @@ compute_iss_tree_diff(
 
 cppcoro::task<std::pair<std::optional<value_diff_item>, object_tree_diff>>
 process_iss_tree_subdiff(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id_a,
     string context_id_b,
     value_diff_item item)
@@ -1009,8 +971,7 @@ process_iss_tree_subdiff(
     if (item.a && is_iss_id(*item.a) && item.b && is_iss_id(*item.b))
     {
         auto subtree_diff = co_await compute_iss_tree_diff(
-            service,
-            session,
+            trc,
             context_id_a,
             cast<string>(*item.a),
             context_id_b,
@@ -1032,29 +993,28 @@ process_iss_tree_subdiff(
 
 cppcoro::task<object_tree_diff>
 compute_iss_tree_diff(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id_a,
     string object_id_a,
     string context_id_b,
     string object_id_b)
 {
     CRADLE_LOG_CALL(
-        << CRADLE_LOG_ARG(session) << CRADLE_LOG_ARG(context_id_a)
+        << CRADLE_LOG_ARG(trc.session) << CRADLE_LOG_ARG(context_id_a)
         << CRADLE_LOG_ARG(object_id_a) << CRADLE_LOG_ARG(context_id_b)
         << CRADLE_LOG_ARG(object_id_b))
 
     auto [object_a, object_b] = co_await cppcoro::when_all(
-        get_iss_object(service, session, context_id_a, object_id_a),
-        get_iss_object(service, session, context_id_b, object_id_b));
+        get_iss_object(trc, context_id_a, object_id_a),
+        get_iss_object(trc, context_id_b, object_id_b));
     auto diff = compute_value_diff(object_a, object_b);
 
     auto subtasks = map(
-        [=, &service](auto item)
+        [=](auto item)
             -> cppcoro::task<
                 std::pair<std::optional<value_diff_item>, object_tree_diff>> {
             return process_iss_tree_subdiff(
-                service, session, context_id_a, context_id_b, std::move(item));
+                trc, context_id_a, context_id_b, std::move(item));
         },
         std::move(diff));
 
@@ -1093,13 +1053,12 @@ compute_iss_tree_diff(
 
 static cppcoro::shared_task<string>
 resolve_meta_chain(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     calculation_request request)
 {
     CRADLE_LOG_CALL(
-        << CRADLE_LOG_ARG(session) << CRADLE_LOG_ARG(context_id)
+        << CRADLE_LOG_ARG(trc.session) << CRADLE_LOG_ARG(context_id)
         << CRADLE_LOG_ARG(request))
 
     while (is_meta(request))
@@ -1107,21 +1066,20 @@ resolve_meta_chain(
         auto generator = as_meta(std::move(request)).generator;
         request
             = from_dynamic<calculation_request>(co_await resolve_calc_to_value(
-                service, session, context_id, std::move(generator)));
+                trc, context_id, std::move(generator)));
     }
     co_return co_await resolve_calc_to_iss_object(
-        service, session, context_id, std::move(request));
+        trc, context_id, std::move(request));
 }
 
 static cppcoro::shared_task<dynamic>
 locally_resolve_meta_chain(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id,
     calculation_request request)
 {
     CRADLE_LOG_CALL(
-        << CRADLE_LOG_ARG(session) << CRADLE_LOG_ARG(context_id)
+        << CRADLE_LOG_ARG(trc.session) << CRADLE_LOG_ARG(context_id)
         << CRADLE_LOG_ARG(request))
 
     while (is_meta(request))
@@ -1129,17 +1087,16 @@ locally_resolve_meta_chain(
         auto generator = as_meta(std::move(request)).generator;
         request
             = from_dynamic<calculation_request>(co_await resolve_calc_to_value(
-                service, session, context_id, std::move(generator)));
+                trc, context_id, std::move(generator)));
     }
 
     co_return co_await resolve_calc_to_value(
-        service, session, context_id, std::move(request));
+        trc, context_id, std::move(request));
 }
 
 static cppcoro::task<object_tree_diff>
 compute_calc_tree_diff(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id_a,
     string calc_id_a,
     string context_id_b,
@@ -1147,8 +1104,7 @@ compute_calc_tree_diff(
 
 cppcoro::task<std::pair<std::optional<value_diff_item>, object_tree_diff>>
 process_calc_tree_subdiff(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id_a,
     string context_id_b,
     value_diff_item item)
@@ -1168,12 +1124,12 @@ process_calc_tree_subdiff(
             && service_b == thinknode_service_id::CALC)
         {
             subtree_diff = co_await compute_calc_tree_diff(
-                service, session, context_id_a, id_a, context_id_b, id_b);
+                trc, context_id_a, id_a, context_id_b, id_b);
         }
         else
         {
             subtree_diff = co_await compute_iss_tree_diff(
-                service, session, context_id_a, id_a, context_id_b, id_b);
+                trc, context_id_a, id_a, context_id_b, id_b);
         }
 
         for (auto& node : subtree_diff)
@@ -1194,26 +1150,23 @@ process_calc_tree_subdiff(
 
 static cppcoro::task<object_tree_diff>
 compute_calc_tree_diff(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context trc,
     string context_id_a,
     string calc_id_a,
     string context_id_b,
     string calc_id_b)
 {
     auto [calc_a, calc_b] = co_await cppcoro::when_all(
-        retrieve_calculation_request(
-            service, session, context_id_a, calc_id_a),
-        retrieve_calculation_request(
-            service, session, context_id_b, calc_id_b));
+        retrieve_calculation_request(trc, context_id_a, calc_id_a),
+        retrieve_calculation_request(trc, context_id_b, calc_id_b));
     auto diff = compute_value_diff(to_dynamic(calc_a), to_dynamic(calc_b));
 
     auto subtasks = map(
-        [=, &service](auto item)
+        [=](auto item)
             -> cppcoro::task<
                 std::pair<std::optional<value_diff_item>, object_tree_diff>> {
             return process_calc_tree_subdiff(
-                service, session, context_id_a, context_id_b, std::move(item));
+                trc, context_id_a, context_id_b, std::move(item));
         },
         std::move(diff));
 
@@ -1258,8 +1211,7 @@ namespace uncached {
 
 cppcoro::task<string>
 uncached_resolve_results_api_query(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     string const& plan_iss_id,
     string const& function,
@@ -1270,16 +1222,15 @@ uncached_resolve_results_api_query(
         << CRADLE_LOG_ARG(function) << CRADLE_LOG_ARG(args))
 
     // Get the original context ID associated with this plan.
-    auto raw_plan_data = co_await get_iss_object(
-        service, session, context_id, plan_iss_id, true);
+    auto raw_plan_data
+        = co_await get_iss_object(trc, context_id, plan_iss_id, true);
     auto plan_context = cast<string>(
         get_field(cast<dynamic_map>(raw_plan_data), "context_id"));
     // Get an ID for the plan as a dynamic value.
     // This has to be done in the plan's original context so that Thinknode
     // doesn't upgrade it.
     auto dynamic_plan_id = co_await resolve_calc_to_iss_object(
-        service,
-        session,
+        trc,
         plan_context,
         make_calculation_request_with_cast(cast_calc_request(
             make_thinknode_type_info_with_dynamic_type(
@@ -1303,10 +1254,9 @@ uncached_resolve_results_api_query(
             none,
             calc_args));
     auto generator_calc_id = co_await resolve_calc_to_iss_object(
-        service, session, context_id, generator_request);
-    auto generated_request
-        = from_dynamic<results_api_generated_request>(co_await get_iss_object(
-            service, session, context_id, generator_calc_id));
+        trc, context_id, generator_request);
+    auto generated_request = from_dynamic<results_api_generated_request>(
+        co_await get_iss_object(trc, context_id, generator_calc_id));
 
     // If there's no generated request, this query isn't supported by the
     // version of the planning app that created the plan.
@@ -1318,8 +1268,7 @@ uncached_resolve_results_api_query(
     }
     // Otherwise, submit the request as a meta generator.
     co_return co_await resolve_meta_chain(
-        service,
-        session,
+        trc,
         generated_request.context_id,
         make_calculation_request_with_meta(meta_calc_request{
             *std::move(generated_request.request),
@@ -1330,24 +1279,22 @@ uncached_resolve_results_api_query(
 
 cppcoro::task<dynamic>
 locally_resolve_results_api_query(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     string const& plan_iss_id,
     string const& function,
     std::vector<dynamic> const& args)
 {
     // Get the original context ID associated with this plan.
-    auto raw_plan_data = co_await get_iss_object(
-        service, session, context_id, plan_iss_id, true);
+    auto raw_plan_data
+        = co_await get_iss_object(trc, context_id, plan_iss_id, true);
     auto plan_context = cast<string>(
         get_field(cast<dynamic_map>(raw_plan_data), "context_id"));
     // Get an ID for the plan as a dynamic value.
     // This has to be done in the plan's original context so that Thinknode
     // doesn't upgrade it.
     auto dynamic_plan_id = co_await resolve_calc_to_iss_object(
-        service,
-        session,
+        trc,
         plan_context,
         make_calculation_request_with_cast(make_cast_calc_request(
             make_thinknode_type_info_with_dynamic_type(
@@ -1371,10 +1318,9 @@ locally_resolve_results_api_query(
             none,
             calc_args));
     auto generator_calc_id = co_await resolve_calc_to_iss_object(
-        service, session, context_id, generator_request);
-    auto generated_request
-        = from_dynamic<results_api_generated_request>(co_await get_iss_object(
-            service, session, context_id, generator_calc_id));
+        trc, context_id, generator_request);
+    auto generated_request = from_dynamic<results_api_generated_request>(
+        co_await get_iss_object(trc, context_id, generator_calc_id));
 
     // If there's no generated request, this query isn't supported by the
     // version of the planning app that created the plan.
@@ -1386,8 +1332,7 @@ locally_resolve_results_api_query(
     }
     // Otherwise, submit the request as a meta generator.
     co_return co_await locally_resolve_meta_chain(
-        service,
-        session,
+        trc,
         generated_request.context_id,
         make_calculation_request_with_meta(meta_calc_request{
             *std::move(generated_request.request),
@@ -1400,8 +1345,7 @@ locally_resolve_results_api_query(
 
 cppcoro::task<string>
 resolve_results_api_query(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     string const& plan_iss_id,
     string const& function,
@@ -1413,22 +1357,21 @@ resolve_results_api_query(
 
     auto cache_key = make_sha256_hashed_id(
         "resolve_results_api_query",
-        session.api_url,
+        trc.session.api_url,
         context_id,
         plan_iss_id,
         function,
         args);
 
-    co_return co_await fully_cached<string>(service, cache_key, [&] {
+    co_return co_await fully_cached<string>(trc.service, cache_key, [&] {
         return uncached::uncached_resolve_results_api_query(
-            service, session, context_id, plan_iss_id, function, args);
+            trc, context_id, plan_iss_id, function, args);
     });
 }
 
 cppcoro::task<dynamic>
 locally_resolve_results_api_query(
-    service_core& service,
-    thinknode_session const& session,
+    thinknode_request_context trc,
     string const& context_id,
     string const& plan_iss_id,
     string const& function,
@@ -1440,15 +1383,15 @@ locally_resolve_results_api_query(
 
     auto cache_key = make_sha256_hashed_id(
         "locally_resolve_results_api_query",
-        session.api_url,
+        trc.session.api_url,
         context_id,
         plan_iss_id,
         function,
         args);
 
-    co_return co_await fully_cached<dynamic>(service, cache_key, [&] {
+    co_return co_await fully_cached<dynamic>(trc.service, cache_key, [&] {
         return uncached::locally_resolve_results_api_query(
-            service, session, context_id, plan_iss_id, function, args);
+            trc, context_id, plan_iss_id, function, args);
     });
 }
 
@@ -1456,15 +1399,14 @@ static void
 send_response(
     websocket_server_impl& server,
     client_request const& request,
-    server_message_content const& content,
-    tasklet_tracker* tasklet)
+    server_message_content const& content)
 {
     {
         std::ostringstream os;
         os << "send_response " << request.message.content.type;
-        if (tasklet)
+        if (request.tasklet)
         {
-            tasklet->log(os.str());
+            request.tasklet->log(os.str());
         }
         else
         {
@@ -1477,11 +1419,18 @@ send_response(
         make_websocket_server_message(request.message.request_id, content));
 }
 
+static thinknode_request_context
+make_thinknode_request_context(
+    websocket_server_impl& server, client_request& request)
+{
+    return thinknode_request_context{
+        server.core,
+        get_client(server.clients, request.client).session,
+        request.tasklet};
+}
+
 static cppcoro::task<>
-process_message(
-    websocket_server_impl& server,
-    client_request request,
-    tasklet_tracker* tasklet)
+process_message(websocket_server_impl& server, client_request request)
 {
     auto const& content = request.message.content;
     if (get_client(server.clients, request.client).session.api_url.empty()
@@ -1492,8 +1441,7 @@ process_message(
             server,
             request,
             make_server_message_content_with_error(
-                make_error_response_with_unregistered_client(nil)),
-            tasklet);
+                make_error_response_with_unregistered_client(nil)));
         co_return;
     }
     switch (get_tag(content))
@@ -1508,8 +1456,7 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_registration_acknowledgement(
-                    nil),
-                tasklet);
+                    nil));
             break;
         }
         case client_message_content_tag::TEST: {
@@ -1519,8 +1466,7 @@ process_message(
             send_response(
                 server,
                 request,
-                make_server_message_content_with_test(response),
-                tasklet);
+                make_server_message_content_with_test(response));
             break;
         }
         case client_message_content_tag::CACHE_INSERT: {
@@ -1531,8 +1477,7 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_cache_insert_acknowledgement(
-                    nil),
-                tasklet);
+                    nil));
             break;
         }
         case client_message_content_tag::CACHE_QUERY: {
@@ -1543,15 +1488,13 @@ process_message(
                 request,
                 make_server_message_content_with_cache_response(
                     make_websocket_cache_response(
-                        key, entry ? entry->value : none)),
-                tasklet);
+                        key, entry ? entry->value : none)));
             break;
         }
         case client_message_content_tag::ISS_OBJECT: {
             auto const& gio = as_iss_object(content);
             auto msgpack_data = co_await get_iss_blob(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 gio.context_id,
                 gio.object_id,
                 gio.ignore_upgrades);
@@ -1560,15 +1503,13 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_iss_object_response(
-                    iss_object_response{std::move(encoded_object)}),
-                tasklet);
+                    iss_object_response{std::move(encoded_object)}));
             break;
         }
         case client_message_content_tag::RESOLVE_ISS_OBJECT: {
             auto const& rio = as_resolve_iss_object(content);
             auto immutable_id = co_await resolve_iss_object_to_immutable(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 rio.context_id,
                 rio.object_id,
                 rio.ignore_upgrades);
@@ -1576,30 +1517,26 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_resolve_iss_object_response(
-                    resolve_iss_object_response{immutable_id}),
-                tasklet);
+                    resolve_iss_object_response{immutable_id}));
             break;
         }
         case client_message_content_tag::ISS_OBJECT_METADATA: {
             auto const& giom = as_iss_object_metadata(content);
             auto metadata = co_await get_iss_object_metadata(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 giom.context_id,
                 giom.object_id);
             send_response(
                 server,
                 request,
                 make_server_message_content_with_iss_object_metadata_response(
-                    iss_object_metadata_response{std::move(metadata)}),
-                tasklet);
+                    iss_object_metadata_response{std::move(metadata)}));
             break;
         }
         case client_message_content_tag::POST_ISS_OBJECT: {
             auto const& pio = as_post_iss_object(content);
             auto object_id = co_await post_iss_object(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 pio.context_id,
                 parse_url_type_string(pio.schema),
                 pio.encoding,
@@ -1608,19 +1545,16 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_post_iss_object_response(
-                    make_post_iss_object_response(object_id)),
-                tasklet);
+                    make_post_iss_object_response(object_id)));
             break;
         }
         case client_message_content_tag::COPY_ISS_OBJECT: {
+            auto trc{make_thinknode_request_context(server, request)};
             auto const& cio = as_copy_iss_object(content);
-            auto source_bucket = co_await get_context_bucket(
-                server.core,
-                get_client(server.clients, request.client).session,
-                cio.source_context_id);
+            auto source_bucket
+                = co_await get_context_bucket(trc, cio.source_context_id);
             co_await deeply_copy_iss_object(
-                server.core,
-                get_client(server.clients, request.client).session,
+                trc,
                 source_bucket,
                 cio.source_context_id,
                 cio.destination_context_id,
@@ -1628,19 +1562,17 @@ process_message(
             send_response(
                 server,
                 request,
-                make_server_message_content_with_copy_iss_object_response(nil),
-                tasklet);
+                make_server_message_content_with_copy_iss_object_response(
+                    nil));
             break;
         }
         case client_message_content_tag::COPY_CALCULATION: {
+            auto trc{make_thinknode_request_context(server, request)};
             auto const& cc = as_copy_calculation(content);
-            auto source_bucket = co_await get_context_bucket(
-                server.core,
-                get_client(server.clients, request.client).session,
-                cc.source_context_id);
+            auto source_bucket
+                = co_await get_context_bucket(trc, cc.source_context_id);
             co_await deeply_copy_calculation(
-                server.core,
-                get_client(server.clients, request.client).session,
+                trc,
                 source_bucket,
                 cc.source_context_id,
                 cc.destination_context_id,
@@ -1649,46 +1581,39 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_copy_calculation_response(
-                    nil),
-                tasklet);
+                    nil));
             break;
         }
         case client_message_content_tag::CALCULATION_REQUEST: {
             auto const& gcr = as_calculation_request(content);
             auto calc = co_await retrieve_calculation_request(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 gcr.context_id,
-                gcr.calculation_id,
-                tasklet);
+                gcr.calculation_id);
             send_response(
                 server,
                 request,
                 make_server_message_content_with_calculation_request_response(
-                    make_calculation_request_response(calc)),
-                tasklet);
+                    make_calculation_request_response(calc)));
             break;
         }
         case client_message_content_tag::POST_CALCULATION: {
             auto const& pc = as_post_calculation(content);
             auto calc_id = co_await resolve_calc_to_iss_object(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 pc.context_id,
                 pc.calculation);
             send_response(
                 server,
                 request,
                 make_server_message_content_with_post_calculation_response(
-                    make_post_calculation_response(calc_id)),
-                tasklet);
+                    make_post_calculation_response(calc_id)));
             break;
         }
         case client_message_content_tag::ISS_DIFF: {
             auto const& idr = as_iss_diff(content);
             auto diff = co_await compute_iss_tree_diff(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 idr.context_a,
                 idr.id_a,
                 idr.context_b,
@@ -1696,15 +1621,13 @@ process_message(
             send_response(
                 server,
                 request,
-                make_server_message_content_with_iss_diff_response(diff),
-                tasklet);
+                make_server_message_content_with_iss_diff_response(diff));
             break;
         }
         case client_message_content_tag::CALCULATION_SEARCH: {
             auto const& csr = as_calculation_search(content);
             auto matches = co_await search_calculation(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 csr.context_id,
                 csr.calculation_id,
                 csr.search_string);
@@ -1712,15 +1635,13 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_calculation_search_response(
-                    make_calculation_search_response(matches)),
-                tasklet);
+                    make_calculation_search_response(matches)));
             break;
         }
         case client_message_content_tag::CALCULATION_DIFF: {
             auto const& cdr = as_calculation_diff(content);
             auto diff = co_await compute_calc_tree_diff(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 cdr.context_a,
                 cdr.id_a,
                 cdr.context_b,
@@ -1729,15 +1650,13 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_calculation_diff_response(
-                    diff),
-                tasklet);
+                    diff));
             break;
         }
         case client_message_content_tag::RESOLVE_META_CHAIN: {
             auto const& rmc = as_resolve_meta_chain(content);
             auto calc_id = co_await resolve_meta_chain(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 rmc.context_id,
                 make_calculation_request_with_meta(meta_calc_request{
                     std::move(rmc.generator),
@@ -1748,30 +1667,25 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_resolve_meta_chain_response(
-                    make_resolve_meta_chain_response(calc_id)),
-                tasklet);
+                    make_resolve_meta_chain_response(calc_id)));
             break;
         }
         case client_message_content_tag::PERFORM_LOCAL_CALC: {
             auto const& pc = as_perform_local_calc(content);
             auto result = co_await resolve_calc_to_value(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 pc.context_id,
-                pc.calculation,
-                tasklet);
+                pc.calculation);
             send_response(
                 server,
                 request,
-                make_server_message_content_with_local_calc_result(result),
-                tasklet);
+                make_server_message_content_with_local_calc_result(result));
             break;
         }
         case client_message_content_tag::RESULTS_API_QUERY: {
             auto const& raq = as_results_api_query(content);
             auto result = co_await resolve_results_api_query(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 raq.context_id,
                 raq.plan_iss_id,
                 raq.function,
@@ -1780,15 +1694,13 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_results_api_response(
-                    make_results_api_response(result)),
-                tasklet);
+                    make_results_api_response(result)));
             break;
         }
         case client_message_content_tag::LOCAL_RESULTS_API_QUERY: {
             auto const& raq = as_local_results_api_query(content);
             auto result = co_await locally_resolve_results_api_query(
-                server.core,
-                get_client(server.clients, request.client).session,
+                make_thinknode_request_context(server, request),
                 raq.context_id,
                 raq.plan_iss_id,
                 raq.function,
@@ -1797,8 +1709,7 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_local_results_api_response(
-                    make_local_results_api_response(result)),
-                tasklet);
+                    make_local_results_api_response(result)));
             break;
         }
         case client_message_content_tag::INTROSPECTION_CONTROL: {
@@ -1808,8 +1719,7 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_introspection_control_response(
-                    nil),
-                tasklet);
+                    nil));
             break;
         }
         case client_message_content_tag::INTROSPECTION_STATUS_QUERY: {
@@ -1820,8 +1730,7 @@ process_message(
                 server,
                 request,
                 make_server_message_content_with_introspection_status_response(
-                    response),
-                tasklet);
+                    response));
             break;
         }
         default:
@@ -1833,14 +1742,12 @@ process_message(
 
 static cppcoro::task<>
 process_message_with_error_handling(
-    websocket_server_impl& server,
-    client_request request,
-    tasklet_tracker* tasklet)
+    websocket_server_impl& server, client_request request)
 {
-    tasklet_run tasklet_run(tasklet);
+    tasklet_run tasklet_run(request.tasklet);
     try
     {
-        co_await process_message(server, request, tasklet);
+        co_await process_message(server, request);
     }
     catch (bad_http_status_code& e)
     {
@@ -1853,8 +1760,7 @@ process_message_with_error_handling(
                     make_http_failure_info(
                         get_required_error_info<attempted_http_request_info>(
                             e),
-                        get_required_error_info<http_response_info>(e)))),
-            tasklet);
+                        get_required_error_info<http_response_info>(e)))));
     }
     catch (std::exception& e)
     {
@@ -1863,8 +1769,7 @@ process_message_with_error_handling(
             server,
             request,
             make_server_message_content_with_error(
-                make_error_response_with_unknown(e.what())),
-            tasklet);
+                make_error_response_with_unknown(e.what())));
     }
     co_return;
 }
@@ -1888,6 +1793,7 @@ on_message(
     ws_server_type::message_ptr raw_message)
 {
     string request_id;
+    tasklet_tracker* tasklet = nullptr;
     try
     {
         auto dynamic_message = parse_msgpack_value(raw_message->get_payload());
@@ -1909,13 +1815,12 @@ on_message(
         {
             std::ostringstream os;
             os << "websocket: " << get_tag(message.content);
-            auto tasklet = create_tasklet_tracker("server", os.str());
+            tasklet = create_tasklet_tracker("server", os.str());
             server.async_scope.spawn(schedule_on(
                 server.pool,
                 process_message_with_error_handling(
                     server,
-                    client_request{hdl, std::move(message)},
-                    std::move(tasklet))));
+                    client_request{hdl, std::move(message), tasklet})));
         }
     }
     catch (std::exception& e)
@@ -1929,6 +1834,8 @@ on_message(
                 make_server_message_content_with_error(
                     make_error_response_with_unknown(e.what()))));
     }
+    // TODO Resource leak if an exception occurs before tasklet captured by
+    // tasklet_run. Force-finish here?
 }
 
 static void
