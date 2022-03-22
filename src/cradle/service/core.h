@@ -7,6 +7,7 @@
 #include <cppcoro/task.hpp>
 
 #include <cradle/caching/immutable.h>
+#include <cradle/introspection/tasklet.h>
 #include <cradle/io/http_requests.hpp>
 #include <cradle/service/internals.h>
 #include <cradle/service/types.hpp>
@@ -49,7 +50,10 @@ http_connection_interface&
 http_connection_for_thread(service_core& core);
 
 cppcoro::task<http_response>
-async_http_request(service_core& core, http_request request);
+async_http_request(
+    service_core& core,
+    http_request request,
+    tasklet_tracker* client = nullptr);
 
 namespace detail {
 
@@ -106,9 +110,9 @@ disk_cached(
         })));
 }
 
-template<class Value, class Key>
+template<class Value>
 cppcoro::shared_task<Value>
-cached(service_core& core, Key key, cppcoro::task<Value> task)
+cached(service_core& core, id_interface const& key, cppcoro::task<Value> task)
 {
     immutable_cache_ptr<Value> ptr(
         core.internals().cache,
@@ -117,19 +121,20 @@ cached(service_core& core, Key key, cppcoro::task<Value> task)
     return ptr.task();
 }
 
-template<class Value, class Key, class TaskCreator>
+template<class Value, class TaskCreator>
 cppcoro::shared_task<Value>
-cached(service_core& core, Key key, TaskCreator task_creator)
+cached(service_core& core, id_interface const& key, TaskCreator task_creator)
 {
     immutable_cache_ptr<Value> ptr(core.internals().cache, key, task_creator);
     return ptr.task();
 }
 
-template<class Value, class Key, class TaskCreator>
+template<class Value, class TaskCreator>
 cppcoro::shared_task<Value>
-fully_cached(service_core& core, Key key, TaskCreator task_creator)
+fully_cached(
+    service_core& core, id_interface const& key, TaskCreator task_creator)
 {
-    return cached<Value>(core, key, [=, &core] {
+    return cached<Value>(core, key, [&] {
         return disk_cached<Value>(core, key, std::move(task_creator));
     });
 }

@@ -24,6 +24,7 @@
 #include <cradle/encodings/native.h>
 #include <cradle/fs/file_io.h>
 #include <cradle/fs/utilities.h>
+#include <cradle/introspection/tasklet.h>
 #include <cradle/service/internals.h>
 
 namespace cradle {
@@ -72,9 +73,14 @@ http_connection_for_thread(service_core& core)
 }
 
 cppcoro::task<http_response>
-async_http_request(service_core& core, http_request request)
+async_http_request(
+    service_core& core, http_request request, tasklet_tracker* client)
 {
+    std::ostringstream s;
+    s << "HTTP: " << request.method << " " << request.url;
+    auto tasklet = create_tasklet_tracker("HTTP", s.str(), client);
     co_await core.internals().http_pool.schedule();
+    tasklet_run tasklet_run(tasklet);
     null_check_in check_in;
     null_progress_reporter reporter;
     co_return http_connection_for_thread(core).perform_request(

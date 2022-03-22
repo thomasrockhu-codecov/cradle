@@ -119,6 +119,14 @@ make_sha256_hashed_id(Args... args)
     return sha256_hashed_id<Args...>(std::make_tuple(std::move(args)...));
 }
 
+template<class... Args>
+captured_id
+make_captured_sha256_hashed_id(Args... args)
+{
+    return captured_id{
+        new sha256_hashed_id<Args...>(std::make_tuple(std::move(args)...))};
+}
+
 } // namespace cradle
 
 #endif
