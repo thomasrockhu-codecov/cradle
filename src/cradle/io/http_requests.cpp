@@ -253,7 +253,7 @@ http_connection::perform_request(
     progress_reporter_interface& reporter,
     http_request const& request)
 {
-    CRADLE_LOG_CALL(<< CRADLE_LOG_ARG(request))
+    spdlog::get("cradle")->info("HTTP perform_request");
 
     CURL* curl = impl_->curl;
     assert(curl);

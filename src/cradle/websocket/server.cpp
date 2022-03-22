@@ -1456,8 +1456,11 @@ send_response(
     client_request const& request,
     server_message_content const& content)
 {
-    CRADLE_LOG_CALL(
-        << CRADLE_LOG_ARG(request.message) << CRADLE_LOG_ARG(content))
+    {
+        std::ostringstream os;
+        os << "send_response " << request.message.content.type;
+        spdlog::get("cradle")->info(os.str());
+    }
     send(
         server,
         request.client,
@@ -1467,8 +1470,6 @@ send_response(
 static cppcoro::task<>
 process_message(websocket_server_impl& server, client_request request)
 {
-    CRADLE_LOG_CALL(<< CRADLE_LOG_ARG(request.message))
-
     auto const& content = request.message.content;
     if (get_client(server.clients, request.client).session.api_url.empty()
         && !is_registration(content))
@@ -1898,6 +1899,7 @@ initialize(websocket_server_impl& server, server_config const& config)
         auto combined_logger = std::make_shared<spdlog::logger>(
             "cradle", begin(sinks), end(sinks));
         spdlog::register_logger(combined_logger);
+        spdlog::set_pattern("[%H:%M:%S:%e] [thread %t] %v");
     }
 }
 

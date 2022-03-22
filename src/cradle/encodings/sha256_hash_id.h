@@ -96,7 +96,7 @@ struct sha256_hashed_id : id_interface
                 },
                 args_);
             picosha2::output_hex(hashed, hashed + 32, s);
-            spdlog::get("cradle")->info(s.str());
+            spdlog::get("cradle")->debug(s.str());
         }
     }
 
