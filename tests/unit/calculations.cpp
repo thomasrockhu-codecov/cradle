@@ -93,7 +93,7 @@ TEST_CASE("function IDs", "[calcs][ws]")
 namespace {
 
 dynamic
-dynamic_subtract(dynamic_array args)
+dynamic_subtract(dynamic_array args, tasklet_tracker*)
 {
     return cast<double>(args.at(0)) - cast<double>(args.at(1));
 }
@@ -161,7 +161,7 @@ TEST_CASE("individual calcs", "[calcs][ws]")
     // lambda w/ actual lambda
     REQUIRE(
         eval(make_calculation_request_with_lambda(make_lambda_calculation(
-            make_function([](dynamic_array args) {
+            make_function([](dynamic_array args, tasklet_tracker*) {
                 return cast<double>(args.at(0)) - cast<double>(args.at(1));
             }),
             {make_calculation_request_with_value(dynamic(7.0)),
@@ -272,7 +272,7 @@ TEST_CASE("lambda calc caching", "[calcs][ws]")
 
     int call_count = 0;
 
-    auto add = make_function([&](dynamic_array args) {
+    auto add = make_function([&](dynamic_array args, tasklet_tracker*) {
         ++call_count;
         return cast<double>(args.at(0)) + cast<double>(args.at(1));
     });
@@ -347,7 +347,7 @@ TEST_CASE("mixed calcs", "[calcs][ws]")
 
     auto lambda_calc
         = make_calculation_request_with_lambda(make_lambda_calculation(
-            make_function([](dynamic_array args) {
+            make_function([](dynamic_array args, tasklet_tracker*) {
                 return cast<double>(args.at(0)) - cast<double>(args.at(1));
             }),
             {make_calculation_request_with_value(dynamic(7.0)), remote_calc}));

@@ -1,6 +1,7 @@
 #include <cppcoro/sync_wait.hpp>
 
 #include <cradle/external_api.h>
+#include <cradle/introspection/tasklet.h>
 #include <cradle/service/core.h>
 #include <cradle/utilities/testing.h>
 #include <cradle/websocket/calculations.h>
@@ -17,7 +18,7 @@ TEST_CASE("resolve_calc_to_value", "[external]")
 
     auto test_calc
         = make_calculation_request_with_lambda(make_lambda_calculation(
-            make_function([](dynamic_array args) {
+            make_function([](dynamic_array args, tasklet_tracker*) {
                 return cast<double>(args.at(0)) + cast<double>(args.at(1));
             }),
             {make_calculation_request_with_value(dynamic(1.0)),

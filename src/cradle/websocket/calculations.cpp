@@ -35,9 +35,22 @@ namespace cradle {
 namespace uncached {
 
 cppcoro::task<dynamic>
-perform_lambda_calc(lambda_function const& function, std::vector<dynamic> args)
+perform_lambda_calc(
+    service_core& service,
+    lambda_function const& function,
+    std::vector<dynamic> args,
+    tasklet_tracker* client)
 {
-    co_return function.object(std::move(args));
+    auto app = string{"any"};
+    auto image = make_thinknode_provider_image_info_with_tag("unused");
+    auto pool_name = std::string{"lambda@"} + app;
+    auto tasklet = create_tasklet_tracker(pool_name, "lambda func", client);
+    co_await get_local_compute_pool_for_image(
+        service, std::make_pair(app, image))
+        .schedule();
+
+    auto run_guard = tasklet_run(tasklet);
+    co_return function.object(std::move(args), tasklet);
 }
 
 } // namespace uncached
@@ -57,7 +70,8 @@ perform_lambda_calc(
 
     auto await_guard = tasklet_await(tasklet, function_name, cache_key);
     co_return co_await cached<dynamic>(service, cache_key, [&] {
-        return uncached::perform_lambda_calc(function, std::move(args));
+        return uncached::perform_lambda_calc(
+            service, function, std::move(args), tasklet);
     });
 }
 

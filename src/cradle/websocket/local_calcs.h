@@ -1,11 +1,21 @@
 #ifndef CRADLE_WEBSOCKET_LOCAL_CALCS_H
 #define CRADLE_WEBSOCKET_LOCAL_CALCS_H
 
+#include <string>
+#include <utility>
+
+#include <cppcoro/static_thread_pool.hpp>
+
 #include <cradle/introspection/tasklet.h>
 #include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
 
 namespace cradle {
+
+cppcoro::static_thread_pool&
+get_local_compute_pool_for_image(
+    service_core& service,
+    std::pair<std::string, thinknode_provider_image_info> const& tag);
 
 cppcoro::task<dynamic>
 perform_local_function_calc(
