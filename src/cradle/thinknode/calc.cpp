@@ -120,12 +120,18 @@ post_calculation(
     string context_id,
     thinknode_calc_request request)
 {
-    auto cache_key = make_sha256_hashed_id(
-        "post_calculation", trc.session.api_url, context_id, request);
-
-    return fully_cached<string>(trc.service, cache_key, [=] {
+    string function_name{"post_calculation"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, trc.session.api_url, context_id, request);
+    auto create_task = [=]() {
         return uncached::post_calculation(trc, context_id, request);
-    });
+    };
+    return make_shared_task_for_cacheable<string>(
+        trc.service,
+        std::move(cache_key),
+        create_task,
+        trc.tasklet,
+        std::move(function_name));
 }
 
 optional<calculation_status>
@@ -319,7 +325,7 @@ retrieve_calculation_request(
         function_name, trc.session.api_url, context_id, calc_id);
     auto create_task = [=]() {
         return uncached::retrieve_calculation_request(
-            trc, std::move(context_id), std::move(calc_id));
+            trc, context_id, calc_id);
     };
     return make_shared_task_for_cacheable<thinknode_calc_request>(
         trc.service,

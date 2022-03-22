@@ -322,12 +322,18 @@ resolve_named_type_reference(
     string context_id,
     api_named_type_reference ref)
 {
-    auto cache_key = make_sha256_hashed_id(
-        "resolve_named_type_reference", trc.session.api_url, context_id, ref);
-
-    return fully_cached<api_type_info>(trc.service, cache_key, [=] {
+    string function_name{"resolve_named_type_reference"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, trc.session.api_url, context_id, ref);
+    auto create_task = [=]() {
         return uncached::resolve_named_type_reference(trc, context_id, ref);
-    });
+    };
+    return make_shared_task_for_cacheable<api_type_info>(
+        trc.service,
+        std::move(cache_key),
+        create_task,
+        trc.tasklet,
+        std::move(function_name));
 }
 
 namespace uncached {
@@ -396,18 +402,24 @@ coerce_encoded_object(
     picosha2::hash256_hex_string(
         data, data + encoded_object.size(), data_hash);
 
-    auto cache_key = make_sha256_hashed_id(
-        "coerce_encoded_object",
+    string function_name{"coerce_encoded_object"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name,
         trc.session.api_url,
         context_id,
         schema,
         encoding,
         data_hash);
-
-    return fully_cached<blob>(trc.service, cache_key, [=] {
+    auto create_task = [=]() {
         return uncached::coerce_encoded_object(
             trc, context_id, schema, encoding, encoded_object);
-    });
+    };
+    return make_shared_task_for_cacheable<blob>(
+        trc.service,
+        std::move(cache_key),
+        create_task,
+        trc.tasklet,
+        std::move(function_name));
 }
 
 static cppcoro::task<string>
@@ -535,11 +547,11 @@ type_contains_references(
 
     auto cache_key = make_sha256_hashed_id(
         "type_contains_references", trc.session.api_url, context_id, type);
-
-    co_return co_await fully_cached<bool>(trc.service, cache_key, [&] {
+    auto create_task = [&] {
         return uncached::type_contains_references(
             trc, already_visited, context_id, type);
-    });
+    };
+    co_return co_await fully_cached<bool>(trc.service, cache_key, create_task);
 }
 
 cppcoro::task<nil_t>
@@ -697,19 +709,16 @@ deeply_copy_iss_object(
     {
         auto object
             = co_await get_iss_object(trc, source_context_id, object_id);
+        auto recurse = [&](string const& ref) -> cppcoro::task<nil_t> {
+            co_return co_await cradle::deeply_copy_iss_object(
+                trc,
+                source_bucket,
+                source_context_id,
+                destination_context_id,
+                ref);
+        };
         co_await visit_object_references(
-            trc,
-            source_context_id,
-            object_type,
-            object,
-            [&](string const& ref) -> cppcoro::task<nil_t> {
-                co_return co_await cradle::deeply_copy_iss_object(
-                    trc,
-                    source_bucket,
-                    source_context_id,
-                    destination_context_id,
-                    ref);
-            });
+            trc, source_context_id, object_type, object, recurse);
     }
 
     co_return nil;
@@ -736,14 +745,16 @@ deeply_copy_iss_object(
         destination_context_id,
         object_id);
 
-    co_return co_await fully_cached<nil_t>(trc.service, cache_key, [&] {
+    auto create_task = [&] {
         return uncached::deeply_copy_iss_object(
             trc,
             source_bucket,
             source_context_id,
             destination_context_id,
             object_id);
-    });
+    };
+    co_return co_await fully_cached<nil_t>(
+        trc.service, cache_key, create_task);
 }
 
 cppcoro::task<nil_t>
@@ -843,9 +854,6 @@ deeply_copy_calculation(
         // context to see if it already exists there.
         try
         {
-            // Moving the following line inside the
-            // retrieve_calculation_request() call seems to cause a crash.
-            // #170 again?
             calculation = co_await retrieve_calculation_request(
                 trc,
                 destination_context_id,
@@ -873,18 +881,16 @@ deeply_copy_calculation(
         // Even if the calculation already exists at the destination, it's
         // possible that the arguments aren't entirely there, so we still need
         // to proceed recursively.
+        auto recurse = [&](string const& ref) -> cppcoro::task<nil_t> {
+            return cradle::deeply_copy_calculation(
+                trc,
+                source_bucket,
+                source_context_id,
+                destination_context_id,
+                ref);
+        };
         co_await visit_calc_references(
-            trc,
-            destination_context_id,
-            calculation,
-            [&](string const& ref) -> cppcoro::task<nil_t> {
-                return cradle::deeply_copy_calculation(
-                    trc,
-                    source_bucket,
-                    source_context_id,
-                    destination_context_id,
-                    ref);
-            });
+            trc, destination_context_id, calculation, recurse);
     }
 
     if (copy_needed)
@@ -921,15 +927,16 @@ deeply_copy_calculation(
         source_context_id,
         destination_context_id,
         calculation_id);
-
-    co_return co_await fully_cached<nil_t>(trc.service, cache_key, [&] {
+    auto create_task = [&] {
         return uncached::deeply_copy_calculation(
             trc,
             source_bucket,
             source_context_id,
             destination_context_id,
             calculation_id);
-    });
+    };
+    co_return co_await fully_cached<nil_t>(
+        trc.service, cache_key, create_task);
 }
 
 static bool
@@ -1363,10 +1370,12 @@ resolve_results_api_query(
         function,
         args);
 
-    co_return co_await fully_cached<string>(trc.service, cache_key, [&] {
+    auto create_task = [&] {
         return uncached::uncached_resolve_results_api_query(
             trc, context_id, plan_iss_id, function, args);
-    });
+    };
+    co_return co_await fully_cached<string>(
+        trc.service, cache_key, create_task);
 }
 
 cppcoro::task<dynamic>
@@ -1388,11 +1397,12 @@ locally_resolve_results_api_query(
         plan_iss_id,
         function,
         args);
-
-    co_return co_await fully_cached<dynamic>(trc.service, cache_key, [&] {
+    auto create_task = [&] {
         return uncached::locally_resolve_results_api_query(
             trc, context_id, plan_iss_id, function, args);
-    });
+    };
+    co_return co_await fully_cached<dynamic>(
+        trc.service, cache_key, create_task);
 }
 
 static void

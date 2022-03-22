@@ -86,10 +86,12 @@ perform_local_function_calc(
 
     tasklet_await around_await(
         trc.tasklet, "perform_local_function_calc", cache_key);
-    auto result = co_await fully_cached<dynamic>(trc.service, cache_key, [&] {
+    auto task_creator = [&] {
         return uncached::perform_local_function_calc(
             trc, context_id, account, app, name, std::move(args));
-    });
+    };
+    auto result
+        = co_await fully_cached<dynamic>(trc.service, cache_key, task_creator);
     co_return result;
 }
 

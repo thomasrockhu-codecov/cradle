@@ -30,13 +30,18 @@ cppcoro::shared_task<thinknode_app_version_info>
 get_app_version_info(
     thinknode_request_context trc, string account, string app, string version)
 {
-    auto cache_key = make_sha256_hashed_id(
-        "get_app_version_info", trc.session.api_url, account, app, version);
-
-    return fully_cached<thinknode_app_version_info>(
-        trc.service, cache_key, [=] {
-            return uncached::get_app_version_info(trc, account, app, version);
-        });
+    string function_name{"get_app_version_info"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, trc.session.api_url, account, app, version);
+    auto create_task = [=]() {
+        return uncached::get_app_version_info(trc, account, app, version);
+    };
+    return make_shared_task_for_cacheable<thinknode_app_version_info>(
+        trc.service,
+        std::move(cache_key),
+        create_task,
+        trc.tasklet,
+        std::move(function_name));
 }
 
 } // namespace cradle
