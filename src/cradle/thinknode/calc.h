@@ -16,7 +16,7 @@ struct check_in_interface;
 // Post a calculation to Thinknode.
 cppcoro::shared_task<string>
 post_calculation(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string context_id,
     thinknode_calc_request request);
 
@@ -32,7 +32,7 @@ calc_status_as_query_string(calculation_status status);
 // Query the status of a calculation.
 cppcoro::task<calculation_status>
 query_calculation_status(
-    thinknode_request_context trc, string context_id, string calc_id);
+    thinknode_request_context ctx, string context_id, string calc_id);
 
 // Long poll the status of a calculation.
 //
@@ -42,12 +42,12 @@ query_calculation_status(
 //
 cppcoro::async_generator<calculation_status>
 long_poll_calculation_status(
-    thinknode_request_context trc, string context_id, string calc_id);
+    thinknode_request_context ctx, string context_id, string calc_id);
 
 // Retrieve a calculation request from Thinknode.
 cppcoro::shared_task<thinknode_calc_request>
 retrieve_calculation_request(
-    thinknode_request_context trc, string context_id, string calc_id);
+    thinknode_request_context ctx, string context_id, string calc_id);
 
 // Substitute the variables in a Thinknode request for new requests.
 thinknode_calc_request
@@ -109,7 +109,7 @@ submit_thinknode_let_calc(
 // Note that currently the search is limited to matching function names.
 cppcoro::task<std::vector<string>>
 search_calculation(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string context_id,
     string calculation_id,
     string search_string);

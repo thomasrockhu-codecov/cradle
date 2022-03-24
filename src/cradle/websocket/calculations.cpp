@@ -36,7 +36,7 @@ namespace uncached {
 
 cppcoro::task<dynamic>
 perform_lambda_calc(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     lambda_function const& function,
     std::vector<dynamic> args)
 {
@@ -44,9 +44,9 @@ perform_lambda_calc(
     auto image = make_thinknode_provider_image_info_with_tag("unused");
     auto pool_name = std::string{"lambda@"} + app;
     auto tasklet
-        = create_tasklet_tracker(pool_name, "lambda func", trc.tasklet);
+        = create_tasklet_tracker(pool_name, "lambda func", ctx.tasklet);
     co_await get_local_compute_pool_for_image(
-        trc.service, std::make_pair(app, image))
+        ctx.service, std::make_pair(app, image))
         .schedule();
 
     auto run_guard = tasklet_run(tasklet);
@@ -57,7 +57,7 @@ perform_lambda_calc(
 
 cppcoro::task<dynamic>
 perform_lambda_calc(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     lambda_function const& function,
     std::vector<dynamic> args)
 {
@@ -67,22 +67,22 @@ perform_lambda_calc(
         ref(*function.id),
         make_id(natively_encoded_sha256(args)));
 
-    auto await_guard = tasklet_await(trc.tasklet, function_name, cache_key);
-    co_return co_await cached<dynamic>(trc.service, cache_key, [&] {
-        return uncached::perform_lambda_calc(trc, function, std::move(args));
+    auto await_guard = tasklet_await(ctx.tasklet, function_name, cache_key);
+    co_return co_await cached<dynamic>(ctx.service, cache_key, [&] {
+        return uncached::perform_lambda_calc(ctx, function, std::move(args));
     });
 }
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     std::map<string, calculation_request> const& environment,
     calculation_request request);
 
 cppcoro::task<dynamic>
 resolve_calc_to_value(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     std::map<string, calculation_request> const& environment,
     calculation_request request)
@@ -90,19 +90,19 @@ resolve_calc_to_value(
     auto recursive_call
         = [&](calculation_request request) -> cppcoro::task<dynamic> {
         return resolve_calc_to_value(
-            trc, context_id, environment, std::move(request));
+            ctx, context_id, environment, std::move(request));
     };
     auto coercive_call = [&](thinknode_type_info const& schema,
                              dynamic value) -> cppcoro::task<dynamic> {
         return coerce_local_calc_result(
-            trc, context_id, schema, std::move(value));
+            ctx, context_id, schema, std::move(value));
     };
 
     switch (get_tag(request))
     {
         case calculation_request_tag::REFERENCE:
             co_return co_await get_iss_object(
-                trc, context_id, as_reference(request));
+                ctx, context_id, as_reference(request));
         case calculation_request_tag::VALUE:
             co_return as_value(std::move(request));
         case calculation_request_tag::LAMBDA: {
@@ -112,7 +112,7 @@ resolve_calc_to_value(
             for (auto& arg : lambda.args)
                 arg_values.push_back(co_await recursive_call(std::move(arg)));
             co_return co_await perform_lambda_calc(
-                trc, lambda.function, std::move(arg_values));
+                ctx, lambda.function, std::move(arg_values));
         }
         case calculation_request_tag::FUNCTION:
             // If the function is specifically requested to be executed
@@ -123,10 +123,10 @@ resolve_calc_to_value(
                        == execution_host_selection::THINKNODE)
             {
                 co_return co_await get_iss_object(
-                    trc,
+                    ctx,
                     context_id,
                     co_await resolve_calc_to_iss_object(
-                        trc, context_id, environment, std::move(request)));
+                        ctx, context_id, environment, std::move(request)));
             }
             // Otherwise, we evaluate the function locally.
             else
@@ -140,7 +140,7 @@ resolve_calc_to_value(
                         co_await recursive_call(std::move(arg)));
                 }
                 co_return co_await perform_local_function_calc(
-                    trc,
+                    ctx,
                     context_id,
                     function.account,
                     function.app,
@@ -196,7 +196,7 @@ resolve_calc_to_value(
             for (auto& v : let.variables)
                 extended_environment[v.first] = std::move(v.second);
             co_return co_await resolve_calc_to_value(
-                trc, context_id, extended_environment, std::move(let.in));
+                ctx, context_id, extended_environment, std::move(let.in));
         }
         case calculation_request_tag::VARIABLE:
             co_return co_await recursive_call(
@@ -223,7 +223,7 @@ resolve_calc_to_value(
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     std::map<string, calculation_request> const& environment,
     calculation_request request)
@@ -243,20 +243,20 @@ resolve_calc_to_iss_object(
         -> cppcoro::task<thinknode_calc_request> {
         co_return make_thinknode_calc_request_with_reference(
             co_await resolve_calc_to_iss_object(
-                trc, context_id, environment, std::move(calc)));
+                ctx, context_id, environment, std::move(calc)));
     };
 
     // post_calc() aids in posting the shallow form of the calculation.
     auto post_calc =
         [&](thinknode_calc_request calc) -> cppcoro::shared_task<std::string> {
-        return post_calculation(trc, context_id, std::move(calc));
+        return post_calculation(ctx, context_id, std::move(calc));
     };
 
     // For other types, the resolution will be to simply post the result as a
     // value to Thinknode via this helper.
     auto post_value = [&](dynamic value) -> cppcoro::shared_task<std::string> {
         return post_iss_object(
-            trc,
+            ctx,
             context_id,
             make_thinknode_type_info_with_dynamic_type(
                 thinknode_dynamic_type()),
@@ -271,7 +271,7 @@ resolve_calc_to_iss_object(
             co_return co_await post_value(as_value(std::move(request)));
         case calculation_request_tag::LAMBDA: {
             co_return co_await post_value(co_await resolve_calc_to_value(
-                trc, context_id, environment, std::move(request)));
+                ctx, context_id, environment, std::move(request)));
         }
         case calculation_request_tag::FUNCTION: {
             // If the function is specifically requested to be executed
@@ -282,7 +282,7 @@ resolve_calc_to_iss_object(
                        == execution_host_selection::LOCAL)
             {
                 co_return co_await post_value(co_await resolve_calc_to_value(
-                    trc, context_id, environment, std::move(request)));
+                    ctx, context_id, environment, std::move(request)));
             }
             // Otherwise, we request Thinknode to evaluate it.
             else
@@ -339,11 +339,11 @@ resolve_calc_to_iss_object(
             for (auto& v : let.variables)
                 extended_environment[v.first] = std::move(v.second);
             co_return co_await resolve_calc_to_iss_object(
-                trc, context_id, extended_environment, std::move(let.in));
+                ctx, context_id, extended_environment, std::move(let.in));
         }
         case calculation_request_tag::VARIABLE:
             co_return co_await resolve_calc_to_iss_object(
-                trc,
+                ctx,
                 context_id,
                 environment,
                 environment.at(as_variable(request)));
@@ -367,22 +367,22 @@ resolve_calc_to_iss_object(
 
 cppcoro::task<dynamic>
 resolve_calc_to_value(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     calculation_request request)
 {
     co_return co_await resolve_calc_to_value(
-        trc, context_id, {}, std::move(request));
+        ctx, context_id, {}, std::move(request));
 }
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     calculation_request request)
 {
     co_return co_await resolve_calc_to_iss_object(
-        trc, context_id, {}, std::move(request));
+        ctx, context_id, {}, std::move(request));
 }
 
 calculation_request

@@ -20,13 +20,13 @@ thinknode_service_id
 get_thinknode_service_id(string const& thinknode_id);
 
 inline cppcoro::task<http_response>
-async_http_request(thinknode_request_context trc, http_request request)
+async_http_request(thinknode_request_context ctx, http_request request)
 {
-    return async_http_request(trc.service, std::move(request), trc.tasklet);
+    return async_http_request(ctx.service, std::move(request), ctx.tasklet);
 }
 
 void
-log_info(thinknode_request_context& trc, const char* msg);
+log_info(thinknode_request_context& ctx, const char* msg);
 
 } // namespace cradle
 

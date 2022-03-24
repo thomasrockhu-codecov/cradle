@@ -60,14 +60,14 @@ introspection_control(cradle::introspection_control_request const& request)
 {
     switch (get_tag(request))
     {
-        case introspection_control_request_tag::ON_OFF: {
-            bool enabled = as_on_off(request);
-            introspection_on_off(enabled);
-            introspection_logging_on_off(enabled);
+        case introspection_control_request_tag::ENABLED: {
+            bool enabled = as_enabled(request);
+            introspection_set_capturing_enabled(enabled);
+            introspection_set_logging_enabled(enabled);
             break;
         }
         case introspection_control_request_tag::CLEAR_ADMIN:
-            introspection_clear_all_info();
+            introspection_clear_info();
             break;
         default:
             CRADLE_THROW(

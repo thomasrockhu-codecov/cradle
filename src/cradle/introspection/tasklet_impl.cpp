@@ -13,6 +13,8 @@ namespace cradle {
 
 int tasklet_impl::next_id = 0;
 
+// Called only from tasklet_admin::new_tasklet(),
+// protected by its lock.
 tasklet_impl::tasklet_impl(
     std::string const& pool_name,
     std::string const& title,
@@ -125,7 +127,8 @@ tasklet_admin::instance()
     return instance;
 }
 
-tasklet_admin::tasklet_admin() : enabled_{false}, logging_enabled_{false}
+tasklet_admin::tasklet_admin()
+    : capturing_enabled_{false}, logging_enabled_{false}
 {
 }
 
@@ -135,7 +138,7 @@ tasklet_admin::new_tasklet(
     std::string const& title,
     tasklet_tracker* client)
 {
-    if (enabled_)
+    if (capturing_enabled_)
     {
         std::scoped_lock admin_lock{mutex_};
         auto impl_client = static_cast<tasklet_impl*>(client);
@@ -150,21 +153,19 @@ tasklet_admin::new_tasklet(
 }
 
 void
-tasklet_admin::on_off(bool enabled)
+tasklet_admin::set_capturing_enabled(bool enabled)
 {
-    // Atomic access, no lock needed
-    enabled_ = enabled;
+    capturing_enabled_ = enabled;
 }
 
 void
-tasklet_admin::logging_on_off(bool enabled)
+tasklet_admin::set_logging_enabled(bool enabled)
 {
-    // Atomic access, no lock needed
     logging_enabled_ = enabled;
 }
 
 void
-tasklet_admin::clear_all_info()
+tasklet_admin::clear_info()
 {
     std::scoped_lock admin_lock{mutex_};
     for (auto it = tasklets_.begin(); it != tasklets_.end();)
@@ -209,7 +210,7 @@ tasklet_admin::hard_reset_testing_only(bool enabled)
         delete it;
     }
     tasklets_.clear();
-    enabled_ = enabled;
+    capturing_enabled_ = enabled;
 }
 
 tasklet_tracker*

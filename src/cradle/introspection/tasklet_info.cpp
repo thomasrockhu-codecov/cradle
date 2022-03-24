@@ -52,21 +52,21 @@ get_tasklet_infos(bool include_finished)
 }
 
 void
-introspection_on_off(bool enabled)
+introspection_set_capturing_enabled(bool enabled)
 {
-    return tasklet_admin::instance().on_off(enabled);
+    return tasklet_admin::instance().set_capturing_enabled(enabled);
 }
 
 void
-introspection_logging_on_off(bool enabled)
+introspection_set_logging_enabled(bool enabled)
 {
-    return tasklet_admin::instance().logging_on_off(enabled);
+    return tasklet_admin::instance().set_logging_enabled(enabled);
 }
 
 void
-introspection_clear_all_info()
+introspection_clear_info()
 {
-    return tasklet_admin::instance().clear_all_info();
+    return tasklet_admin::instance().clear_info();
 }
 
 } // namespace cradle

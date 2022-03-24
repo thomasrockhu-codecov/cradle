@@ -44,13 +44,13 @@ make_function(Function&& function)
 
 cppcoro::task<dynamic>
 resolve_calc_to_value(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     calculation_request request);
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     calculation_request request);
 

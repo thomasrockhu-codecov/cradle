@@ -93,38 +93,38 @@ TEST_CASE("get_tasklet_infos", "[introspection]")
     REQUIRE(all_infos[2].title() == "title 2");
 }
 
-TEST_CASE("introspection_on_off", "[introspection]")
+TEST_CASE("introspection_set_capturing_enabled", "[introspection]")
 {
     clean_tasklet_admin_fixture fixture;
 
-    introspection_on_off(false);
+    introspection_set_capturing_enabled(false);
     create_tasklet_tracker("my_pool", "title 0");
     REQUIRE(get_tasklet_infos(true).size() == 0);
 
-    introspection_on_off(true);
+    introspection_set_capturing_enabled(true);
     create_tasklet_tracker("my_pool", "title 1");
     REQUIRE(get_tasklet_infos(true).size() == 1);
 
-    introspection_on_off(false);
+    introspection_set_capturing_enabled(false);
     create_tasklet_tracker("my_pool", "title 2");
     REQUIRE(get_tasklet_infos(true).size() == 1);
 }
 
-TEST_CASE("introspection_logging_on_off", "[introspection]")
+TEST_CASE("introspection_set_logging_enabled", "[introspection]")
 {
     clean_tasklet_admin_fixture fixture;
 
-    introspection_logging_on_off(true);
+    introspection_set_logging_enabled(true);
     auto t0 = create_tasklet_tracker("my_pool", "title 0");
     // Just test that the call succeeds
     t0->log("msg 0");
 
-    introspection_logging_on_off(false);
+    introspection_set_logging_enabled(false);
     auto t1 = create_tasklet_tracker("my_pool", "title 1");
     t1->log("msg 1");
 }
 
-TEST_CASE("introspection_clear_all_info", "[introspection]")
+TEST_CASE("introspection_clear_info", "[introspection]")
 {
     clean_tasklet_admin_fixture fixture;
 
@@ -134,7 +134,7 @@ TEST_CASE("introspection_clear_all_info", "[introspection]")
     t1->on_finished();
     REQUIRE(get_tasklet_infos(true).size() == 3);
 
-    introspection_clear_all_info();
+    introspection_clear_info();
     auto all_infos = get_tasklet_infos(true);
     REQUIRE(all_infos.size() == 2);
     REQUIRE(all_infos[0].title() == "title 0");

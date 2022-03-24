@@ -126,19 +126,21 @@ get_tasklet_infos(bool include_finished);
  * Enables or disables capturing of introspection events
  */
 void
-introspection_on_off(bool enabled);
+introspection_set_capturing_enabled(bool enabled);
 
 /**
  * Enables or disables introspection logging
  */
 void
-introspection_logging_on_off(bool enabled);
+introspection_set_logging_enabled(bool enabled);
 
 /**
- * Clears all captured introspection information
+ * Clears captured introspection information
+ *
+ * Objects currently being captured may be excluded from being cleared.
  */
 void
-introspection_clear_all_info();
+introspection_clear_info();
 
 } // namespace cradle
 

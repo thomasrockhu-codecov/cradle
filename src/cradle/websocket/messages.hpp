@@ -256,7 +256,7 @@ struct local_results_api_response
 api(union)
 union introspection_control_request
 {
-    bool on_off;
+    bool enabled;
     nil_t clear_admin;
 };
 

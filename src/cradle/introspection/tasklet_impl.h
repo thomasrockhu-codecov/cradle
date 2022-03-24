@@ -2,6 +2,7 @@
 #define CRADLE_INTROSPECTION_TASKLET_IMPL_H
 
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <list>
 #include <map>
@@ -25,8 +26,8 @@ namespace cradle {
  * The mutex should be locked for a short time only, leading to a minimal
  * impact on the event-tracking calls.
  *
- * The finished_ variable indicates if the tasklet has finished; being a bool,
- * access is atomic and does not require the mutex to be locked.
+ * The finished_ variable indicates if the tasklet has finished.
+ * It could be accessed from different threads so put inside an atomic.
  */
 class tasklet_impl : public tasklet_tracker
 {
@@ -107,7 +108,7 @@ class tasklet_impl : public tasklet_tracker
     std::string pool_name_;
     std::string title_;
     tasklet_impl* client_;
-    bool finished_;
+    std::atomic<bool> finished_;
     std::mutex mutex_;
     events_container events_;
 
@@ -126,12 +127,12 @@ class tasklet_impl : public tasklet_tracker
  *
  * Synchronization concerns are similar to the ones for tasklet_impl:
  * - Access to the tasklets_ variable requires locking mutex_.
- * - Access to the enabled_ boolean is lock-free.
+ * - The capturing_enabled_ boolean is put inside an atomic.
  */
 class tasklet_admin
 {
-    bool enabled_;
-    bool logging_enabled_;
+    std::atomic<bool> capturing_enabled_;
+    std::atomic<bool> logging_enabled_;
     std::mutex mutex_;
     std::list<tasklet_impl*> tasklets_;
 
@@ -161,10 +162,10 @@ class tasklet_admin
      * performance impact.
      */
     void
-    on_off(bool enabled);
+    set_capturing_enabled(bool enabled);
 
     void
-    logging_on_off(bool enabled);
+    set_logging_enabled(bool enabled);
 
     bool
     logging_enabled() const
@@ -173,10 +174,10 @@ class tasklet_admin
     }
 
     /**
-     * Deletes all unfinished tasklet_tracker objects
+     * Deletes the finished tasklet_tracker objects
      */
     void
-    clear_all_info();
+    clear_info();
 
     std::vector<tasklet_info>
     get_tasklet_infos(bool include_finished);

@@ -19,7 +19,7 @@ get_local_compute_pool_for_image(
 
 cppcoro::task<dynamic>
 perform_local_function_calc(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     string const& account,
     string const& app,
@@ -28,7 +28,7 @@ perform_local_function_calc(
 
 cppcoro::task<dynamic>
 coerce_local_calc_result(
-    thinknode_request_context trc,
+    thinknode_request_context ctx,
     string const& context_id,
     thinknode_type_info const& schema,
     dynamic value);
