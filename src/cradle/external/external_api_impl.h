@@ -44,7 +44,7 @@ class api_session_impl
         return service_.get_service_core();
     }
 
-    cradle::thinknode_session&
+    cradle::thinknode_session
     get_thinknode_session()
     {
         return thinknode_session_;

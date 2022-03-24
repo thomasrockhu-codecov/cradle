@@ -96,7 +96,7 @@ struct sha256_hashed_id : id_interface
                 },
                 args_);
             picosha2::output_hex(hashed, hashed + 32, s);
-            spdlog::get("cradle")->info(s.str());
+            spdlog::get("cradle")->debug(s.str());
         }
     }
 
@@ -117,6 +117,14 @@ sha256_hashed_id<Args...>
 make_sha256_hashed_id(Args... args)
 {
     return sha256_hashed_id<Args...>(std::make_tuple(std::move(args)...));
+}
+
+template<class... Args>
+captured_id
+make_captured_sha256_hashed_id(Args... args)
+{
+    return captured_id{
+        new sha256_hashed_id<Args...>(std::make_tuple(std::move(args)...))};
 }
 
 } // namespace cradle

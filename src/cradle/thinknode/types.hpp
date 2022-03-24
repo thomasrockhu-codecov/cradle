@@ -24,6 +24,16 @@ struct thinknode_session
     std::string access_token;
 };
 
+struct service_core;
+class tasklet_tracker;
+
+struct thinknode_request_context
+{
+    service_core& service;
+    thinknode_session session;
+    tasklet_tracker* tasklet;
+};
+
 struct thinknode_array_info;
 struct thinknode_blob_type;
 struct thinknode_boolean_type;

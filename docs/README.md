@@ -5,6 +5,7 @@
 * [Immutable data](data.md)
 * [Cache](cache.md)
 * [Messages](msg_overview.md)
+* [Lambda captures](lambda_captures.md)
 
 
 ## Setup

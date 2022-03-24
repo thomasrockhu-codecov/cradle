@@ -33,8 +33,9 @@ TEST_CASE("ISS object resolution", "[thinknode][iss]")
     session.api_url = "https://mgh.thinknode.io/api/v1.0";
     session.access_token = "xyz";
 
-    auto id = cppcoro::sync_wait(resolve_iss_object_to_immutable(
-        service, session, "123", "abc", false));
+    thinknode_request_context ctx{service, session, nullptr};
+    auto id = cppcoro::sync_wait(
+        resolve_iss_object_to_immutable(ctx, "123", "abc", false));
     REQUIRE(id == "def");
 
     REQUIRE(mock_http.is_complete());
@@ -63,8 +64,9 @@ TEST_CASE("ISS object metadata", "[thinknode][iss]")
     session.api_url = "https://mgh.thinknode.io/api/v1.0";
     session.access_token = "xyz";
 
-    auto metadata = cppcoro::sync_wait(
-        get_iss_object_metadata(service, session, "123", "abc"));
+    thinknode_request_context ctx{service, session, nullptr};
+    auto metadata
+        = cppcoro::sync_wait(get_iss_object_metadata(ctx, "123", "abc"));
     REQUIRE(
         metadata
         == (std::map<string, string>(
@@ -94,8 +96,8 @@ TEST_CASE("ISS immutable retrieval", "[thinknode][iss]")
     session.api_url = "https://mgh.thinknode.io/api/v1.0";
     session.access_token = "xyz";
 
-    auto data = cppcoro::sync_wait(
-        retrieve_immutable(service, session, "123", "abc"));
+    thinknode_request_context ctx{service, session, nullptr};
+    auto data = cppcoro::sync_wait(retrieve_immutable(ctx, "123", "abc"));
     REQUIRE(data == dynamic("the-data"));
 
     REQUIRE(mock_http.is_complete());
@@ -231,8 +233,7 @@ TEST_CASE("ISS POST", "[thinknode][iss]")
     session.access_token = "xyz";
 
     auto id = cppcoro::sync_wait(post_iss_object(
-        service,
-        session,
+        thinknode_request_context{service, session, nullptr},
         "123",
         make_thinknode_type_info_with_string_type(thinknode_string_type()),
         dynamic("payload")));
@@ -261,8 +262,8 @@ TEST_CASE("ISS object copy", "[thinknode][iss]")
     session.api_url = "https://mgh.thinknode.io/api/v1.0";
     session.access_token = "xyz";
 
-    cppcoro::sync_wait(
-        shallowly_copy_iss_object(service, session, "abc", "123", "def"));
+    thinknode_request_context ctx{service, session, nullptr};
+    cppcoro::sync_wait(shallowly_copy_iss_object(ctx, "abc", "123", "def"));
 
     REQUIRE(mock_http.is_complete());
     REQUIRE(mock_http.is_in_order());

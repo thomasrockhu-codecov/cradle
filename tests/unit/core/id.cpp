@@ -106,6 +106,15 @@ TEST_CASE("captured_id operators", "[id]")
     REQUIRE(c < d);
 }
 
+TEST_CASE("captured_id construction from raw pointer", "[id]")
+{
+    captured_id c{new simple_id(87)};
+    REQUIRE(c.is_initialized());
+    REQUIRE(*c == make_id(87));
+    c.clear();
+    REQUIRE(!c.is_initialized());
+}
+
 TEST_CASE("captured_id copy construction", "[id]")
 {
     captured_id c;
@@ -283,4 +292,11 @@ TEST_CASE("sha256_hashed_id", "[id]")
     REQUIRE(std::all_of(as_string.begin(), as_string.end(), [](char c) {
         return std::isxdigit(c);
     }));
+}
+
+TEST_CASE("captured sha256_hashed_id", "[id]")
+{
+    auto captured = make_captured_sha256_hashed_id(std::string("xyz"), 87);
+    auto made = make_sha256_hashed_id(std::string("xyz"), 87);
+    REQUIRE(*captured == made);
 }

@@ -24,6 +24,7 @@
 #include <cradle/encodings/native.h>
 #include <cradle/fs/file_io.h>
 #include <cradle/fs/utilities.h>
+#include <cradle/introspection/tasklet.h>
 #include <cradle/service/internals.h>
 
 namespace cradle {
@@ -72,9 +73,14 @@ http_connection_for_thread(service_core& core)
 }
 
 cppcoro::task<http_response>
-async_http_request(service_core& core, http_request request)
+async_http_request(
+    service_core& core, http_request request, tasklet_tracker* client)
 {
+    std::ostringstream s;
+    s << "HTTP: " << request.method << " " << request.url;
+    auto tasklet = create_tasklet_tracker("HTTP", s.str(), client);
     co_await core.internals().http_pool.schedule();
+    tasklet_run tasklet_run(tasklet);
     null_check_in check_in;
     null_progress_reporter reporter;
     co_return http_connection_for_thread(core).perform_request(
@@ -159,18 +165,18 @@ generic_disk_cached(
 
                 T x;
                 detail::deserialize(&x, std::move(natively_encoded_data));
-                spdlog::get("cradle")->info(
+                spdlog::get("cradle")->debug(
                     "deserialized: {}",
                     boost::lexical_cast<std::string>(to_dynamic(x)));
                 co_return x;
             }
             else
             {
-                spdlog::get("cradle")->info("reading file", key);
+                spdlog::get("cradle")->debug("reading file", key);
                 auto data = co_await read_file_contents(
                     core, cache.get_path_for_id(entry->id));
 
-                spdlog::get("cradle")->info("decompressing", key);
+                spdlog::get("cradle")->debug("decompressing", key);
                 auto original_size
                     = boost::numeric_cast<size_t>(entry->original_size);
                 std::unique_ptr<uint8_t[]> decompressed_data(
@@ -181,16 +187,16 @@ generic_disk_cached(
                     data.data(),
                     data.size());
 
-                spdlog::get("cradle")->info("checking CRC", key);
+                spdlog::get("cradle")->debug("checking CRC", key);
                 boost::crc_32_type crc;
                 crc.process_bytes(decompressed_data.get(), original_size);
                 if (crc.checksum() == entry->crc32)
                 {
-                    spdlog::get("cradle")->info("decoding", key);
+                    spdlog::get("cradle")->debug("decoding", key);
                     T decoded;
                     detail::deserialize(
                         &decoded, std::move(decompressed_data), original_size);
-                    spdlog::get("cradle")->info("returning", key);
+                    spdlog::get("cradle")->debug("returning", key);
                     co_return decoded;
                 }
             }
@@ -202,7 +208,7 @@ generic_disk_cached(
         // pretend it's not there. (It will be overwritten.)
         spdlog::get("cradle")->warn("error reading disk cache entry {}", key);
     }
-    spdlog::get("cradle")->info("disk cache miss on {}", key);
+    spdlog::get("cradle")->debug("disk cache miss on {}", key);
 
     // We didn't get it from the cache, so actually create the task to compute
     // the result.

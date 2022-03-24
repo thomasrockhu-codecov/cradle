@@ -131,7 +131,10 @@ struct captured_id
     captured_id()
     {
     }
-    captured_id(id_interface const& id)
+    explicit captured_id(id_interface* id) : id_{id}
+    {
+    }
+    explicit captured_id(id_interface const& id)
     {
         this->capture(id);
     }

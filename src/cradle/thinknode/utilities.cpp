@@ -106,4 +106,17 @@ get_thinknode_service_id(string const& thinknode_id)
     }
 }
 
+void
+log_info(thinknode_request_context& ctx, const char* msg)
+{
+    if (ctx.tasklet)
+    {
+        ctx.tasklet->log(msg);
+    }
+    else
+    {
+        spdlog::get("cradle")->info(msg);
+    }
+}
+
 } // namespace cradle
