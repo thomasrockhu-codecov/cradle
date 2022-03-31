@@ -1,6 +1,6 @@
 #include <chrono>
 
-#include <cradle/introspection/tasklet_info.h>
+#include <cradle/inner/introspection/tasklet_info.h>
 #include <cradle/websocket/introspection.h>
 
 namespace cradle {

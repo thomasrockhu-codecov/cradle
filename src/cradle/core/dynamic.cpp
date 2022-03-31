@@ -4,7 +4,7 @@
 
 #include <cradle/core.h>
 #include <cradle/encodings/yaml.h>
-#include <cradle/utilities/functional.h>
+#include <cradle/inner/utilities/functional.h>
 
 namespace cradle {
 

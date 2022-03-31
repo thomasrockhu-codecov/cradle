@@ -13,9 +13,9 @@
 #include <yaml-cpp/yaml.h>
 #endif
 
-#include <cradle/encodings/base64.h>
+#include <cradle/inner/encodings/base64.h>
+#include <cradle/inner/utilities/text.h>
 #include <cradle/utilities/arrays.h>
-#include <cradle/utilities/text.h>
 
 namespace cradle {
 

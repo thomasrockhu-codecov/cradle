@@ -1,8 +1,8 @@
 #ifndef CRADLE_EXTERNAL_API_IMPL_H
 #define CRADLE_EXTERNAL_API_IMPL_H
 
-#include <cradle/core/exception.h>
 #include <cradle/external_api.h>
+#include <cradle/inner/core/exception.h>
 #include <cradle/service/core.h>
 
 namespace cradle {

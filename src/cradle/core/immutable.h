@@ -3,9 +3,9 @@
 
 #include <cradle/core/api_types.hpp>
 #include <cradle/core/dynamic.h>
-#include <cradle/core/hash.h>
 #include <cradle/core/type_info.h>
 #include <cradle/core/type_interfaces.h>
+#include <cradle/inner/core/hash.h>
 
 namespace cradle {
 

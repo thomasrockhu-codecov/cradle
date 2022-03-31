@@ -1,7 +1,7 @@
 #include <cradle/encodings/msgpack.h>
 
 #include <cradle/encodings/msgpack_internals.h>
-#include <cradle/utilities/text.h>
+#include <cradle/inner/utilities/text.h>
 
 namespace cradle {
 

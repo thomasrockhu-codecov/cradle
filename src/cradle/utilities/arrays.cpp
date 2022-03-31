@@ -1,5 +1,7 @@
 #include <cradle/utilities/arrays.h>
 
+using std::string;
+
 namespace cradle {
 
 void
@@ -25,4 +27,4 @@ check_array_size(size_t expected_size, size_t actual_size)
     }
 }
 
-}
+} // namespace cradle

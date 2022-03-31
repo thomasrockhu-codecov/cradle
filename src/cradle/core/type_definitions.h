@@ -11,6 +11,8 @@
 #include <boost/core/noncopyable.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
+#include <cradle/inner/core/type_definitions.h>
+
 namespace cradle {
 
 using boost::noncopyable;
@@ -18,54 +20,14 @@ using boost::noncopyable;
 using std::string;
 
 using std::optional;
-typedef std::nullopt_t none_t;
-inline constexpr std::nullopt_t none(std::nullopt);
-
-// some(x) creates an optional of the proper type with the value of :x.
-template<class T>
-auto
-some(T&& x)
-{
-    return optional<std::remove_reference_t<T>>(std::forward<T>(x));
-}
 
 typedef int64_t integer;
-
-typedef std::vector<boost::uint8_t> byte_vector;
 
 // nil_t is a unit type. It has only one possible value, :nil.
 struct nil_t
 {
 };
 static nil_t nil;
-
-struct blob
-{
-    blob() : size_(0)
-    {
-    }
-
-    blob(std::shared_ptr<std::byte const> data, std::size_t size)
-        : data_(std::move(data)), size_(size)
-    {
-    }
-
-    std::byte const*
-    data() const
-    {
-        return data_.get();
-    }
-
-    std::size_t
-    size() const
-    {
-        return size_;
-    }
-
- private:
-    std::shared_ptr<std::byte const> data_;
-    std::size_t size_;
-};
 
 // type_info_query<T>::get(&info) should set :info to the CRADLE type info for
 // the type T from the perspective of someone *using* T. This might not be the

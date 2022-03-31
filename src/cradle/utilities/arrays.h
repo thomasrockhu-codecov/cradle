@@ -1,7 +1,9 @@
 #ifndef CRADLE_UTILITIES_ARRAYS_H
 #define CRADLE_UTILITIES_ARRAYS_H
 
-#include <cradle/core/exception.h>
+#include <string>
+
+#include <cradle/inner/core/exception.h>
 
 namespace cradle {
 
@@ -18,11 +20,11 @@ struct array_deleter
 // Check that an index is in bounds.
 // :index must be nonnegative and strictly less than :upper_bound to pass.
 void
-check_index_bounds(string const& label, size_t index, size_t upper_bound);
+check_index_bounds(std::string const& label, size_t index, size_t upper_bound);
 
 // If the above check fails, it throws this exception.
 CRADLE_DEFINE_EXCEPTION(index_out_of_bounds)
-CRADLE_DEFINE_ERROR_INFO(string, index_label)
+CRADLE_DEFINE_ERROR_INFO(std::string, index_label)
 CRADLE_DEFINE_ERROR_INFO(size_t, index_value)
 CRADLE_DEFINE_ERROR_INFO(size_t, index_upper_bound)
 

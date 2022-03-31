@@ -1,4 +1,4 @@
-#include <cradle/utilities/functional.h>
+#include <cradle/inner/utilities/functional.h>
 
 #include <cradle/utilities/testing.h>
 

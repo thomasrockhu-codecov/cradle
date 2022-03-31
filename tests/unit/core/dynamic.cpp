@@ -3,8 +3,8 @@
 #include <cppcoro/sync_wait.hpp>
 
 #include <cradle/core.h>
+#include <cradle/inner/utilities/text.h>
 #include <cradle/utilities/testing.h>
-#include <cradle/utilities/text.h>
 
 using namespace cradle;
 

@@ -5,11 +5,11 @@
 #include <cradle/core/monitoring.h>
 #include <cradle/encodings/msgpack.h>
 #include <cradle/encodings/sha256_hash_id.h>
+#include <cradle/inner/utilities/text.h>
 #include <cradle/io/http_requests.hpp>
 #include <cradle/thinknode/calc.h>
 #include <cradle/thinknode/utilities.h>
 #include <cradle/utilities/logging.h>
-#include <cradle/utilities/text.h>
 
 namespace cradle {
 

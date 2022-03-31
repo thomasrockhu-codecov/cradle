@@ -1,5 +1,5 @@
-#ifndef CRADLE_CORE_TYPE_INTERFACES_HPP
-#define CRADLE_CORE_TYPE_INTERFACES_HPP
+#ifndef CRADLE_CORE_TYPE_INTERFACES_H
+#define CRADLE_CORE_TYPE_INTERFACES_H
 
 #include <map>
 #include <vector>
@@ -9,10 +9,11 @@
 
 #include <cradle/core/api_types.hpp>
 #include <cradle/core/dynamic.h>
-#include <cradle/core/exception.h>
-#include <cradle/core/hash.h>
 #include <cradle/core/type_definitions.h>
 #include <cradle/core/type_info.h>
+#include <cradle/inner/core/exception.h>
+#include <cradle/inner/core/hash.h>
+#include <cradle/inner/core/type_interfaces.h>
 #include <cradle/utilities/arrays.h>
 
 // This file provides implementations of the CRADLE Regular interface
@@ -83,12 +84,6 @@ struct type_info_query<bool>
     }
 };
 
-inline size_t
-deep_sizeof(bool)
-{
-    return sizeof(bool);
-}
-
 void
 to_dynamic(dynamic* v, bool x);
 
@@ -100,12 +95,7 @@ from_dynamic(bool* x, dynamic const& v);
 #define CRADLE_DECLARE_NUMBER_INTERFACE(T)                                    \
     void to_dynamic(dynamic* v, T x);                                         \
                                                                               \
-    void from_dynamic(T* x, dynamic const& v);                                \
-                                                                              \
-    inline size_t deep_sizeof(T)                                              \
-    {                                                                         \
-        return sizeof(T);                                                     \
-    }
+    void from_dynamic(T* x, dynamic const& v);
 
 #define CRADLE_DECLARE_INTEGER_INTERFACE(T)                                   \
     template<>                                                                \
@@ -161,12 +151,6 @@ struct type_info_query<string>
         *info = make_api_type_info_with_string_type(api_string_type());
     }
 };
-
-inline size_t
-deep_sizeof(string const& x)
-{
-    return sizeof(string) + sizeof(char) * x.length();
-}
 
 void
 to_dynamic(dynamic* v, string const& x);
@@ -275,18 +259,6 @@ namespace cradle {
 
 // BLOB
 
-bool
-operator==(blob const& a, blob const& b);
-
-inline bool
-operator!=(blob const& a, blob const& b)
-{
-    return !(a == b);
-}
-
-bool
-operator<(blob const& a, blob const& b);
-
 template<>
 struct type_info_query<blob>
 {
@@ -297,14 +269,6 @@ struct type_info_query<blob>
     }
 };
 
-inline size_t
-deep_sizeof(blob const& b)
-{
-    // This ignores the size of the ownership holder, but that's not a big
-    // deal.
-    return sizeof(blob) + b.size();
-}
-
 struct dynamic;
 
 void
@@ -312,46 +276,6 @@ to_dynamic(dynamic* v, blob const& x);
 
 void
 from_dynamic(blob* x, dynamic const& v);
-
-// BLOBS
-
-size_t
-hash_value(blob const& x);
-
-template<class T>
-std::byte const*
-as_bytes(T const* ptr)
-{
-    return reinterpret_cast<std::byte const*>(ptr);
-}
-
-// Make a blob using a shared_ptr to another type that owns the actual
-// content.
-template<class OwnedType>
-blob
-make_blob(std::shared_ptr<OwnedType> ptr, std::byte const* data, size_t size)
-{
-    // Here we are leveraging shared_ptr's flexibility to provide ownership of
-    // another object (of an arbitrary type) while storing a pointer to data
-    // inside that object.
-    return blob(std::shared_ptr<std::byte const>(std::move(ptr), data), size);
-}
-
-// Make a blob that holds a pointer to some statically allocated data.
-blob
-make_static_blob(std::byte const* data, size_t size);
-
-// Make a blob that holds a pointer to some statically allocated data.
-blob
-make_string_literal_blob(char const* data);
-
-// Make a blob that holds the contents of the given string.
-blob
-make_blob(string s);
-
-// Make a blob that holds the contents of a byte vector.
-blob
-make_blob(byte_vector v);
 
 // STD::VECTOR
 
@@ -412,16 +336,6 @@ struct type_info_query<std::vector<T>>
     }
 };
 
-template<class T>
-size_t
-deep_sizeof(std::vector<T> const& x)
-{
-    size_t size = sizeof(std::vector<T>);
-    for (auto const& i : x)
-        size += deep_sizeof(i);
-    return size;
-}
-
 // STD::ARRAY
 
 template<class T, size_t N>
@@ -481,16 +395,6 @@ struct type_info_query<std::array<T, N>>
     }
 };
 
-template<class T, size_t N>
-size_t
-deep_sizeof(std::array<T, N> const& x)
-{
-    size_t size = 0;
-    for (auto const& i : x)
-        size += deep_sizeof(i);
-    return size;
-}
-
 // STD::MAP
 
 template<class Key, class Value>
@@ -544,16 +448,6 @@ struct type_info_query<std::map<Key, Value>>
     }
 };
 
-template<class Key, class Value>
-size_t
-deep_sizeof(std::map<Key, Value> const& x)
-{
-    size_t size = sizeof(std::map<Key, Value>);
-    for (auto const& i : x)
-        size += deep_sizeof(i.first) + deep_sizeof(i.second);
-    return size;
-}
-
 // OPTIONAL
 
 template<class T>
@@ -565,14 +459,6 @@ struct type_info_query<optional<T>>
         *info = make_api_type_info_with_optional_type(get_type_info<T>());
     }
 };
-
-template<class T>
-size_t
-deep_sizeof(optional<T> const& x)
-{
-    using cradle::deep_sizeof;
-    return sizeof(optional<T>) + (x ? deep_sizeof(*x) : 0);
-}
 
 template<class T>
 void

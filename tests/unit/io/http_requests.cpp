@@ -9,8 +9,8 @@
 
 #include <cradle/core/monitoring.h>
 #include <cradle/encodings/json.h>
-#include <cradle/utilities/environment.h>
-#include <cradle/utilities/errors.h>
+#include <cradle/inner/utilities/environment.h>
+#include <cradle/inner/utilities/errors.h>
 
 // Include this again to clean up preprocessor definitions.
 #include <cradle/io/http_requests.hpp>

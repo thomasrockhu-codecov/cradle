@@ -1,7 +1,7 @@
 #ifndef CRADLE_IO_HTTP_REQUESTS_HPP
 #define CRADLE_IO_HTTP_REQUESTS_HPP
 
-#include <cradle/fs/types.hpp>
+#include <cradle/inner/fs/types.h>
 
 #include <memory>
 

@@ -4,7 +4,7 @@
 #include <cppcoro/async_generator.hpp>
 
 #include <cradle/core.h>
-#include <cradle/introspection/tasklet.h>
+#include <cradle/inner/introspection/tasklet.h>
 #include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
 

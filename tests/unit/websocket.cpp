@@ -5,8 +5,8 @@
 
 #include <cradle/utilities/testing.h>
 
-#include <cradle/encodings/base64.h>
 #include <cradle/fs/utilities.h>
+#include <cradle/inner/encodings/base64.h>
 #include <cradle/websocket/messages.hpp>
 
 using namespace cradle;

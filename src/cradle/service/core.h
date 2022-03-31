@@ -4,10 +4,8 @@
 #include <memory>
 
 #include <cppcoro/fmap.hpp>
-#include <cppcoro/task.hpp>
 
-#include <cradle/caching/immutable.h>
-#include <cradle/introspection/tasklet.h>
+#include <cradle/inner/service/core.h>
 #include <cradle/io/http_requests.hpp>
 #include <cradle/service/internals.h>
 #include <cradle/service/types.hpp>
@@ -20,12 +18,12 @@ struct service_core_internals;
 
 }
 
-struct service_core
+struct service_core : public inner_service_core
 {
-    service_core()
+    service_core() : inner_service_core()
     {
     }
-    service_core(service_config const& config)
+    service_core(service_config const& config) : inner_service_core()
     {
         reset(config);
     }
@@ -55,31 +53,17 @@ async_http_request(
     http_request request,
     tasklet_tracker* client = nullptr);
 
-template<typename Value>
-cppcoro::task<Value>
-disk_cached(
-    service_core& core,
-    id_interface const& key,
-    std::function<cppcoro::task<Value>()> create_task);
-
-template<>
-cppcoro::task<blob>
-disk_cached(
-    service_core& core,
-    id_interface const& key,
-    std::function<cppcoro::task<blob>()> create_task);
-
 template<>
 cppcoro::task<dynamic>
 disk_cached(
-    service_core& core,
+    inner_service_core& core,
     id_interface const& key,
     std::function<cppcoro::task<dynamic>()> create_task);
 
 template<class Value>
 cppcoro::task<Value>
 disk_cached(
-    service_core& core,
+    inner_service_core& core,
     id_interface const& key,
     std::function<cppcoro::task<Value>()> create_task)
 {
@@ -90,29 +74,6 @@ disk_cached(
                 return cppcoro::make_task(cppcoro::fmap(
                     CRADLE_LAMBDIFY(to_dynamic<Value>), create_task()));
             })));
-}
-
-template<class Value, class TaskCreator>
-cppcoro::shared_task<Value>
-cached(service_core& core, id_interface const& key, TaskCreator task_creator)
-{
-    immutable_cache_ptr<Value> ptr(core.internals().cache, key, task_creator);
-    return ptr.task();
-}
-
-template<class Value, class TaskCreator>
-cppcoro::shared_task<Value>
-fully_cached(
-    service_core& core, id_interface const& key, TaskCreator task_creator)
-{
-    // cached() will ensure that a captured id_interface object exists
-    // equalling `key`; it will pass a reference to that object to the lambda.
-    // It will be a different object from `key`; `key` may no longer exist when
-    // the lambda is called.
-    return cached<Value>(
-        core, key, [&core, task_creator](id_interface const& key1) {
-            return disk_cached<Value>(core, key1, std::move(task_creator));
-        });
 }
 
 // Initialize a service for unit testing purposes.

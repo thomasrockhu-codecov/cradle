@@ -1,7 +1,7 @@
 #ifndef CRADLE_FS_UTILITIES_HPP
 #define CRADLE_FS_UTILITIES_HPP
 
-#include <cradle/fs/types.hpp>
+#include <cradle/inner/fs/types.h>
 
 namespace cradle {
 

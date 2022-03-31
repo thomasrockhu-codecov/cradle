@@ -1,9 +1,9 @@
-#include <cradle/encodings/base64.h>
+#include <cradle/inner/encodings/base64.h>
 
 #include <boost/scoped_array.hpp>
 
+#include <cradle/inner/utilities/text.h>
 #include <cradle/utilities/testing.h>
-#include <cradle/utilities/text.h>
 
 using namespace cradle;
 

@@ -1,4 +1,4 @@
-#include <cradle/caching/immutable.h>
+#include <cradle/inner/caching/immutable.h>
 
 #include <sstream>
 

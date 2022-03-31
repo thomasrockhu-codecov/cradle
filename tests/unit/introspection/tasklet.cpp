@@ -4,9 +4,9 @@
 #include <cppcoro/sync_wait.hpp>
 
 #include "tasklet_testing.h"
-#include <cradle/introspection/tasklet.h>
-#include <cradle/introspection/tasklet_impl.h>
-#include <cradle/introspection/tasklet_info.h>
+#include <cradle/inner/introspection/tasklet.h>
+#include <cradle/inner/introspection/tasklet_impl.h>
+#include <cradle/inner/introspection/tasklet_info.h>
 #include <cradle/service/core.h>
 #include <cradle/utilities/testing.h>
 

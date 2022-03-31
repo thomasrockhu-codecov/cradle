@@ -1,4 +1,4 @@
-#include <cradle/encodings/lz4.h>
+#include <cradle/inner/encodings/lz4.h>
 
 #include <cradle/utilities/testing.h>
 

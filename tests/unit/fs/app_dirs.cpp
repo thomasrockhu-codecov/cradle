@@ -1,12 +1,12 @@
-#include <cradle/fs/app_dirs.h>
+#include <cradle/inner/fs/app_dirs.h>
 
 #include <filesystem>
 
 #include <cradle/utilities/testing.h>
 
-#include <cradle/fs/file_io.h>
 #include <cradle/fs/utilities.h>
-#include <cradle/utilities/environment.h>
+#include <cradle/inner/fs/file_io.h>
+#include <cradle/inner/utilities/environment.h>
 
 using namespace cradle;
 

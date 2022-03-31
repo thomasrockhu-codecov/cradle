@@ -1,4 +1,4 @@
-#include <cradle/core/id.h>
+#include <cradle/inner/core/id.h>
 
 #include <algorithm>
 #include <cctype>

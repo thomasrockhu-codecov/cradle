@@ -5,8 +5,8 @@
 
 #include <spdlog/spdlog.h>
 
-#include <cradle/core/id.h>
 #include <cradle/encodings/native.h>
+#include <cradle/inner/core/id.h>
 
 namespace cradle {
 

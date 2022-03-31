@@ -7,7 +7,7 @@
 #include <boost/numeric/conversion/cast.hpp>
 
 #include <cradle/core/dynamic.h>
-#include <cradle/utilities/text.h>
+#include <cradle/inner/utilities/text.h>
 
 namespace cradle {
 
@@ -206,22 +206,6 @@ from_dynamic(ptime* x, dynamic const& v)
 
 // BLOB
 
-bool
-operator==(blob const& a, blob const& b)
-{
-    return a.size() == b.size()
-           && (a.data() == b.data()
-               || std::memcmp(a.data(), b.data(), a.size()) == 0);
-}
-
-bool
-operator<(blob const& a, blob const& b)
-{
-    return a.size() < b.size()
-           || (a.size() == b.size() && a.data() != b.data()
-               && std::memcmp(a.data(), b.data(), a.size()) < 0);
-}
-
 void
 to_dynamic(dynamic* v, blob const& x)
 {
@@ -232,47 +216,6 @@ void
 from_dynamic(blob* x, dynamic const& v)
 {
     *x = cast<blob>(v);
-}
-
-size_t
-hash_value(blob const& x)
-{
-    uint8_t const* bytes = reinterpret_cast<uint8_t const*>(x.data());
-    return boost::hash_range(bytes, bytes + x.size());
-}
-
-blob
-make_static_blob(std::byte const* data, size_t size)
-{
-    return blob(
-        std::shared_ptr<std::byte const>(data, [](std::byte const*) {}), size);
-}
-
-blob
-make_string_literal_blob(char const* data)
-{
-    return make_static_blob(as_bytes(data), strlen(data));
-}
-
-blob
-make_blob(string s)
-{
-    // This is a little roundabout, but it seems like the most reasonable way
-    // to ensure that a) the string contents don't move if the blob is moved
-    // and b) the string contents aren't actually copied if they're large.
-    size_t size = s.size();
-    auto shared_string = std::make_shared<string>(std::move(s));
-    char const* data = shared_string->data();
-    return make_blob(std::move(shared_string), as_bytes(data), size);
-}
-
-blob
-make_blob(byte_vector v)
-{
-    size_t size = v.size();
-    auto shared_vector = std::make_shared<byte_vector>(std::move(v));
-    char const* data = reinterpret_cast<char const*>(shared_vector->data());
-    return make_blob(std::move(shared_vector), as_bytes(data), size);
 }
 
 } // namespace cradle

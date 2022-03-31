@@ -1,7 +1,7 @@
 #include <cradle/api_index.hpp>
 #include <cradle/core/api_types.hpp>
-#include <cradle/encodings/base64.h>
 #include <cradle/encodings/json.h>
+#include <cradle/inner/encodings/base64.h>
 
 #include <picosha2.h>
 

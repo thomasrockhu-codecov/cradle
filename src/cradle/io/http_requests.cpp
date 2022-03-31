@@ -10,8 +10,8 @@
 #include <cradle/core/monitoring.h>
 #include <cradle/encodings/json.h>
 #include <cradle/encodings/msgpack.h>
-#include <cradle/fs/file_io.h>
-#include <cradle/utilities/errors.h>
+#include <cradle/inner/fs/file_io.h>
+#include <cradle/inner/utilities/errors.h>
 #include <cradle/utilities/logging.h>
 
 // Include this again for #define sanitization.

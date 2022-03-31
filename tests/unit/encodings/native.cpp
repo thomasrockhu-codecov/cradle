@@ -3,8 +3,8 @@
 #include <cstring>
 
 #include <cradle/encodings/json.h>
+#include <cradle/inner/utilities/text.h>
 #include <cradle/utilities/testing.h>
-#include <cradle/utilities/text.h>
 
 using namespace cradle;
 

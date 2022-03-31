@@ -1,7 +1,7 @@
-#include <cradle/core/exception.h>
+#include <cradle/inner/core/exception.h>
 
+#include <cradle/inner/utilities/text.h>
 #include <cradle/utilities/testing.h>
-#include <cradle/utilities/text.h>
 
 using namespace cradle;
 

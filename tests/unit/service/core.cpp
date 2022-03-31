@@ -57,7 +57,7 @@ TEST_CASE("small value disk caching", "[service][core]")
     // Data is written to the disk cache in a background thread, so we need to
     // wait for that to finish.
     REQUIRE(occurs_soon([&] {
-        return core.internals().disk_write_pool.get_tasks_total() == 0;
+        return core.inner_internals().disk_write_pool.get_tasks_total() == 0;
     }));
     // Now redo the 'id_12' task to see that it's not actually rerun.
     {
@@ -110,7 +110,7 @@ TEST_CASE("large value disk caching", "[service][core]")
     // Data is written to the disk cache in a background thread, so we need to
     // wait for that to finish.
     REQUIRE(occurs_soon([&] {
-        return core.internals().disk_write_pool.get_tasks_total() == 0;
+        return core.inner_internals().disk_write_pool.get_tasks_total() == 0;
     }));
     // Now redo the 'id_12' task to see that it's not actually rerun.
     {

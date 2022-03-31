@@ -1,6 +1,6 @@
 #include <cradle/io/mock_http.h>
 
-#include <cradle/utilities/errors.h>
+#include <cradle/inner/utilities/errors.h>
 
 #include <algorithm>
 

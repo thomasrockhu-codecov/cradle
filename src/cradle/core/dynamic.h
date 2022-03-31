@@ -8,8 +8,8 @@
 
 #include <cppcoro/task.hpp>
 
-#include <cradle/core/exception.h>
 #include <cradle/core/type_definitions.h>
+#include <cradle/inner/core/exception.h>
 
 namespace cradle {
 

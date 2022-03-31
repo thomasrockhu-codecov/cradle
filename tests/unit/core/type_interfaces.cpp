@@ -2,8 +2,8 @@
 
 #include <cradle/utilities/testing.h>
 
-#include <cradle/caching/disk_cache.hpp>
-#include <cradle/utilities/text.h>
+#include <cradle/inner/utilities/text.h>
+#include <cradle/service/types.hpp>
 
 using namespace cradle;
 
@@ -163,7 +163,7 @@ TEST_CASE("generated type interfaces", "[core][types]")
     {
         INFO("Test a generated structure type.");
         test_regular_value_pair(
-            disk_cache_config(some(string("abc")), 12),
-            disk_cache_config(some(string("def")), 1));
+            service_disk_cache_config(some(string("abc")), 12),
+            service_disk_cache_config(some(string("def")), 1));
     }
 }

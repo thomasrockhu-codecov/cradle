@@ -1,14 +1,14 @@
-#include <cradle/caching/disk_cache.hpp>
+#include <cradle/inner/caching/disk_cache.h>
 
 #include <chrono>
 #include <filesystem>
 #include <thread>
 
-#include <cradle/encodings/base64.h>
-#include <cradle/fs/file_io.h>
 #include <cradle/fs/utilities.h>
+#include <cradle/inner/encodings/base64.h>
+#include <cradle/inner/fs/file_io.h>
+#include <cradle/inner/utilities/text.h>
 #include <cradle/utilities/testing.h>
-#include <cradle/utilities/text.h>
 
 #include <sqlite3.h>
 
