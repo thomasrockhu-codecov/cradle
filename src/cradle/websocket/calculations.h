@@ -2,7 +2,7 @@
 #define CRADLE_WEBSOCKET_CALCULATIONS_H
 
 #include <cradle/inner/introspection/tasklet.h>
-#include <cradle/service/core.h>
+#include <cradle/typing/service/core.h>
 #include <cradle/websocket/types.hpp>
 
 namespace cradle {

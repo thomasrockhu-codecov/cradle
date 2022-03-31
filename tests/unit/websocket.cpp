@@ -3,10 +3,10 @@
 
 #include <thread>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
-#include <cradle/fs/utilities.h>
 #include <cradle/inner/encodings/base64.h>
+#include <cradle/typing/fs/utilities.h>
 #include <cradle/websocket/messages.hpp>
 
 using namespace cradle;

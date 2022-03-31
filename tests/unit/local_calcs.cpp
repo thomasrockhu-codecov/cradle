@@ -4,7 +4,7 @@
 
 #include <cppcoro/sync_wait.hpp>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 #include <cradle/inner/encodings/base64.h>
 #include <cradle/inner/utilities/environment.h>

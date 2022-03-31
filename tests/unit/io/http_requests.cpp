@@ -1,19 +1,19 @@
-#include <cradle/io/http_requests.hpp>
+#include <cradle/typing/io/http_requests.hpp>
 
 #include <boost/algorithm/string.hpp>
 
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/encodings/json.h>
 #include <cradle/inner/utilities/environment.h>
 #include <cradle/inner/utilities/errors.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/encodings/json.h>
 
 // Include this again to clean up preprocessor definitions.
-#include <cradle/io/http_requests.hpp>
+#include <cradle/typing/io/http_requests.hpp>
 
 using namespace cradle;
 

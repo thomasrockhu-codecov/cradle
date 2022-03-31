@@ -9,7 +9,7 @@
 #include <cppcoro/shared_task.hpp>
 #include <cppcoro/task.hpp>
 
-#include <cradle/core/type_definitions.h> // blob
+#include <cradle/typing/core/type_definitions.h> // blob
 #include <cradle/websocket/types.hpp> // calculation_request
 
 namespace cradle {

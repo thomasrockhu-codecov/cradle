@@ -1,6 +1,6 @@
 #include <cradle/inner/encodings/lz4.h>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

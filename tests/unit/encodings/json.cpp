@@ -1,7 +1,7 @@
-#include <cradle/encodings/json.h>
+#include <cradle/typing/encodings/json.h>
 
 #include <cradle/inner/utilities/text.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

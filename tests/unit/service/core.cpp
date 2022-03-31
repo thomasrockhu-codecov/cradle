@@ -1,13 +1,13 @@
-#include <cradle/service/core.h>
+#include <cradle/typing/service/core.h>
 
 #include <cppcoro/sync_wait.hpp>
 
 #include <filesystem>
 
-#include <cradle/service/internals.h>
-#include <cradle/utilities/concurrency_testing.h>
+#include <cradle/typing/service/internals.h>
+#include <cradle/typing/utilities/concurrency_testing.h>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

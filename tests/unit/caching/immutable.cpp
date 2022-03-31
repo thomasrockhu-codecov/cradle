@@ -4,8 +4,8 @@
 
 #include <cppcoro/sync_wait.hpp>
 
-#include <cradle/core/immutable.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/core/immutable.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

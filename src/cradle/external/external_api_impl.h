@@ -3,7 +3,7 @@
 
 #include <cradle/external_api.h>
 #include <cradle/inner/core/exception.h>
-#include <cradle/service/core.h>
+#include <cradle/typing/service/core.h>
 
 namespace cradle {
 

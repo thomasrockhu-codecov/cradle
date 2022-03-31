@@ -1,9 +1,9 @@
-#include <cradle/core/type_interfaces.h>
+#include <cradle/typing/core/type_interfaces.h>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 #include <cradle/inner/utilities/text.h>
-#include <cradle/service/types.hpp>
+#include <cradle/typing/service/types.hpp>
 
 using namespace cradle;
 

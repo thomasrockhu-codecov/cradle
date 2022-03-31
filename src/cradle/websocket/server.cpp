@@ -1,4 +1,4 @@
-#include <cradle/io/asio.h>
+#include <cradle/typing/io/asio.h>
 
 #include <cradle/websocket/server.h>
 #include <cradle/websocket/server_api.h>
@@ -37,10 +37,6 @@
 #include <cppcoro/task.hpp>
 #include <cppcoro/when_all.hpp>
 
-#include <cradle/encodings/json.h>
-#include <cradle/encodings/msgpack.h>
-#include <cradle/encodings/sha256_hash_id.h>
-#include <cradle/encodings/yaml.h>
 #include <cradle/inner/caching/disk_cache.h>
 #include <cradle/inner/encodings/base64.h>
 #include <cradle/inner/fs/app_dirs.h>
@@ -49,21 +45,25 @@
 #include <cradle/inner/utilities/errors.h>
 #include <cradle/inner/utilities/functional.h>
 #include <cradle/inner/utilities/text.h>
-#include <cradle/io/http_requests.hpp>
 #include <cradle/thinknode/apm.h>
 #include <cradle/thinknode/calc.h>
 #include <cradle/thinknode/iam.h>
 #include <cradle/thinknode/iss.h>
 #include <cradle/thinknode/utilities.h>
-#include <cradle/utilities/diff.hpp>
-#include <cradle/utilities/logging.h>
+#include <cradle/typing/encodings/json.h>
+#include <cradle/typing/encodings/msgpack.h>
+#include <cradle/typing/encodings/sha256_hash_id.h>
+#include <cradle/typing/encodings/yaml.h>
+#include <cradle/typing/io/http_requests.hpp>
+#include <cradle/typing/utilities/diff.hpp>
+#include <cradle/typing/utilities/logging.h>
 #include <cradle/websocket/calculations.h>
 #include <cradle/websocket/introspection.h>
 #include <cradle/websocket/messages.hpp>
 
 // Include this again because some #defines snuck in to overwrite some of our
 // enum constants.
-#include <cradle/core/api_types.hpp>
+#include <cradle/typing/core/api_types.hpp>
 
 struct ws_config : public websocketpp::config::asio
 {

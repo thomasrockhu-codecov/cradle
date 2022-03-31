@@ -4,11 +4,11 @@
 #include <filesystem>
 #include <thread>
 
-#include <cradle/fs/utilities.h>
 #include <cradle/inner/encodings/base64.h>
 #include <cradle/inner/fs/file_io.h>
 #include <cradle/inner/utilities/text.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/fs/utilities.h>
+#include <cradle/typing/utilities/testing.h>
 
 #include <sqlite3.h>
 

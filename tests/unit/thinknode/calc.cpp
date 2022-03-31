@@ -8,10 +8,10 @@
 
 #include <fakeit.h>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/encodings/json.h>
-#include <cradle/io/mock_http.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/encodings/json.h>
+#include <cradle/typing/io/mock_http.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 using namespace fakeit;

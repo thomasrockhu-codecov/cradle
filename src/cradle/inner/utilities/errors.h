@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <cradle/inner/core/exception.h>
+
 namespace cradle {
 
 // If an error occurs internally within library that provides its own

@@ -2,11 +2,11 @@
 
 #include <filesystem>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
-#include <cradle/fs/utilities.h>
 #include <cradle/inner/fs/file_io.h>
 #include <cradle/inner/utilities/environment.h>
+#include <cradle/typing/fs/utilities.h>
 
 using namespace cradle;
 
