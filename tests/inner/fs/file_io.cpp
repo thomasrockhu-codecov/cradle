@@ -2,8 +2,9 @@
 
 #include <filesystem>
 
+#include <catch2/catch.hpp>
+
 #include <cradle/inner/utilities/errors.h>
-#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

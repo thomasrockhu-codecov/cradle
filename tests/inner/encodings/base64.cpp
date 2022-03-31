@@ -1,10 +1,11 @@
 #include <cradle/inner/encodings/base64.h>
 
 #include <boost/scoped_array.hpp>
+#include <catch2/catch.hpp>
 
 #include <cradle/inner/utilities/text.h>
-#include <cradle/typing/utilities/testing.h>
 
+using std::string;
 using namespace cradle;
 
 // This tests the entire base64 encode/decode interface on a single string.

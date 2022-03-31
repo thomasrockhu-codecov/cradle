@@ -4,13 +4,15 @@
 #include <filesystem>
 #include <thread>
 
+#include <catch2/catch.hpp>
+#include <sqlite3.h>
+
 #include <cradle/inner/encodings/base64.h>
 #include <cradle/inner/fs/file_io.h>
+#include <cradle/inner/fs/utilities.h>
 #include <cradle/inner/utilities/text.h>
-#include <cradle/typing/fs/utilities.h>
-#include <cradle/typing/utilities/testing.h>
 
-#include <sqlite3.h>
+using std::string;
 
 using namespace cradle;
 

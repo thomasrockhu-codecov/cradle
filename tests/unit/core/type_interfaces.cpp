@@ -1,3 +1,8 @@
+// Some of this testing is already done in inner/core/type_interfaces.cpp.
+// Differences:
+// - test_regular_value(_pair) test conversions from/to dynamic, which their
+//   inner parts do not.
+// - More types here.
 #include <cradle/typing/core/type_interfaces.h>
 
 #include <cradle/typing/utilities/testing.h>

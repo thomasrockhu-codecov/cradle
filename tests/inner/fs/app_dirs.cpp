@@ -2,11 +2,12 @@
 
 #include <filesystem>
 
-#include <cradle/typing/utilities/testing.h>
+#include <catch2/catch.hpp>
 
+#include <cradle/inner/core/type_definitions.h>
 #include <cradle/inner/fs/file_io.h>
+#include <cradle/inner/fs/utilities.h>
 #include <cradle/inner/utilities/environment.h>
-#include <cradle/typing/fs/utilities.h>
 
 using namespace cradle;
 
@@ -26,8 +27,8 @@ TEST_CASE("Windows app directories", "[fs][app_dirs]")
 
 TEST_CASE("XDG app directories", "[fs][app_dirs]")
 {
-    auto author = some(string("not_used_here"));
-    auto app = string("cradle_xdg_test_case_app");
+    auto author = some(std::string("not_used_here"));
+    auto app = std::string("cradle_xdg_test_case_app");
 
     // Keep everything we're doing local to the test directory.
     auto cwd = std::filesystem::current_path();
@@ -105,7 +106,7 @@ TEST_CASE("XDG app directories", "[fs][app_dirs]")
     // without app dirs) and check that the search path is adjusted correctly.
     auto system_config_dir_a = cwd / "xdg_sys_config_a";
     reset_directory(system_config_dir_a);
-    create_directory(system_config_dir_a / app);
+    std::filesystem::create_directory(system_config_dir_a / app);
     auto system_config_dir_b = cwd / "xdg_sys_config_b";
     reset_directory(system_config_dir_b);
     auto system_config_dir_c = cwd / "xdg_sys_config_c";

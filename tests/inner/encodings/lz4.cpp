@@ -1,6 +1,8 @@
 #include <cradle/inner/encodings/lz4.h>
 
-#include <cradle/typing/utilities/testing.h>
+#include <cstring>
+
+#include <catch2/catch.hpp>
 
 using namespace cradle;
 

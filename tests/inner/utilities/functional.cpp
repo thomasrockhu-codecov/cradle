@@ -1,6 +1,6 @@
 #include <cradle/inner/utilities/functional.h>
 
-#include <cradle/typing/utilities/testing.h>
+#include <catch2/catch.hpp>
 
 using namespace cradle;
 

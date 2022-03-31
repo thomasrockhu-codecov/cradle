@@ -1,14 +1,15 @@
 #include <chrono>
 #include <thread>
 
+#include <catch2/catch.hpp>
 #include <cppcoro/sync_wait.hpp>
 
-#include "tasklet_testing.h"
 #include <cradle/inner/introspection/tasklet.h>
 #include <cradle/inner/introspection/tasklet_impl.h>
 #include <cradle/inner/introspection/tasklet_info.h>
-#include <cradle/typing/service/core.h>
-#include <cradle/typing/utilities/testing.h>
+#include <cradle/inner/service/core.h>
+#include <inner/introspection/tasklet_testing.h>
+#include <inner/support/core.h>
 
 using namespace cradle;
 
@@ -132,18 +133,20 @@ TEST_CASE("tasklet_await", "[introspection]")
 TEST_CASE("shared_task_for_cacheable", "[introspection]")
 {
     clean_tasklet_admin_fixture fixture;
-    service_core core;
-    init_test_service(core);
+    inner_service_core core;
+    init_test_inner_service(core);
 
     captured_id cache_key{make_id(87)};
-    auto task_creator = []() -> cppcoro::task<int> { co_return 314; };
+    auto task_creator = []() -> cppcoro::task<blob> {
+        co_return make_blob(std::string("314"));
+    };
     auto client = create_tasklet_tracker("client_pool", "client_title");
-    auto me = make_shared_task_for_cacheable<int>(
+    auto me = make_shared_task_for_cacheable<blob>(
         core, std::move(cache_key), task_creator, client, "my summary");
     auto res = cppcoro::sync_wait(
-        [&]() -> cppcoro::task<int> { co_return co_await me; }());
+        [&]() -> cppcoro::task<blob> { co_return co_await me; }());
 
-    REQUIRE(res == 314);
+    REQUIRE(res == make_blob(std::string("314")));
     auto events = latest_tasklet_info().events();
     REQUIRE(events.size() == 3);
     REQUIRE(events[0].what() == tasklet_event_type::SCHEDULED);

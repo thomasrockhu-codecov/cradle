@@ -1,11 +1,12 @@
+#include <catch2/catch.hpp>
+
 #include <cradle/inner/core/exception.h>
 
 #include <cradle/inner/utilities/text.h>
-#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 
-TEST_CASE("error info", "[core][utilities]")
+TEST_CASE("error info", "[inner][exception]")
 {
     parsing_error error;
     error << parsed_text_info("asdf");

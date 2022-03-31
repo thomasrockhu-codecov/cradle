@@ -1,12 +1,14 @@
 #include <cradle/inner/utilities/environment.h>
 
-#include <cradle/typing/utilities/testing.h>
+#include <catch2/catch.hpp>
+
+#include <cradle/inner/core/type_definitions.h>
 
 using namespace cradle;
 
 TEST_CASE("environment variables", "[core][utilities]")
 {
-    string var_name = "some_unlikely_env_variable_awapwogj";
+    std::string var_name = "some_unlikely_env_variable_awapwogj";
 
     REQUIRE(get_optional_environment_variable(var_name) == none);
 
@@ -20,7 +22,7 @@ TEST_CASE("environment variables", "[core][utilities]")
         REQUIRE(get_required_error_info<variable_name_info>(e) == var_name);
     }
 
-    string new_value = "nv";
+    std::string new_value = "nv";
 
     set_environment_variable(var_name, new_value);
 

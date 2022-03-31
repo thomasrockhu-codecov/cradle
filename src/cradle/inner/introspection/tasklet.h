@@ -10,7 +10,7 @@
 namespace cradle {
 
 struct id_interface;
-struct service_core;
+struct inner_service_core;
 
 /**
  * Tracks a "tasklet": a conceptual task, implemented as a coroutine
@@ -178,7 +178,7 @@ shared_task_wrapper(
 template<typename Value, typename TaskCreator>
 cppcoro::shared_task<Value>
 make_shared_task_for_cacheable(
-    service_core& service,
+    inner_service_core& service,
     captured_id cache_key,
     TaskCreator task_creator,
     tasklet_tracker* client,
