@@ -55,45 +55,26 @@ async_http_request(
     http_request request,
     tasklet_tracker* client = nullptr);
 
-namespace detail {
-
-template<class Value>
-struct cached_task_creator
-{
-    cppcoro::task<Value>* task;
-
-    cppcoro::task<Value>
-    operator()() const
-    {
-        return std::move(*task);
-    }
-};
-
-} // namespace detail
-
-cppcoro::task<dynamic>
-disk_cached(
-    service_core& core,
-    std::string key,
-    std::function<cppcoro::task<dynamic>()> create_task);
-
-cppcoro::task<dynamic>
+template<typename Value>
+cppcoro::task<Value>
 disk_cached(
     service_core& core,
     id_interface const& key,
-    std::function<cppcoro::task<dynamic>()> create_task);
+    std::function<cppcoro::task<Value>()> create_task);
 
-cppcoro::task<blob>
-disk_cached(
-    service_core& core,
-    std::string key,
-    std::function<cppcoro::task<blob>()> create_task);
-
+template<>
 cppcoro::task<blob>
 disk_cached(
     service_core& core,
     id_interface const& key,
     std::function<cppcoro::task<blob>()> create_task);
+
+template<>
+cppcoro::task<dynamic>
+disk_cached(
+    service_core& core,
+    id_interface const& key,
+    std::function<cppcoro::task<dynamic>()> create_task);
 
 template<class Value>
 cppcoro::task<Value>
@@ -104,21 +85,11 @@ disk_cached(
 {
     return cppcoro::make_task(cppcoro::fmap(
         CRADLE_LAMBDIFY(from_dynamic<Value>),
-        disk_cached(core, key, [create_task = std::move(create_task)]() {
-            return cppcoro::make_task(cppcoro::fmap(
-                CRADLE_LAMBDIFY(to_dynamic<Value>), create_task()));
-        })));
-}
-
-template<class Value>
-cppcoro::shared_task<Value>
-cached(service_core& core, id_interface const& key, cppcoro::task<Value> task)
-{
-    immutable_cache_ptr<Value> ptr(
-        core.internals().cache,
-        key,
-        detail::cached_task_creator<Value>{&task});
-    return ptr.task();
+        disk_cached<dynamic>(
+            core, key, [create_task = std::move(create_task)]() {
+                return cppcoro::make_task(cppcoro::fmap(
+                    CRADLE_LAMBDIFY(to_dynamic<Value>), create_task()));
+            })));
 }
 
 template<class Value, class TaskCreator>
@@ -134,9 +105,14 @@ cppcoro::shared_task<Value>
 fully_cached(
     service_core& core, id_interface const& key, TaskCreator task_creator)
 {
-    return cached<Value>(core, key, [&] {
-        return disk_cached<Value>(core, key, std::move(task_creator));
-    });
+    // cached() will ensure that a captured id_interface object exists
+    // equalling `key`; it will pass a reference to that object to the lambda.
+    // It will be a different object from `key`; `key` may no longer exist when
+    // the lambda is called.
+    return cached<Value>(
+        core, key, [&core, task_creator](id_interface const& key1) {
+            return disk_cached<Value>(core, key1, std::move(task_creator));
+        });
 }
 
 // Initialize a service for unit testing purposes.

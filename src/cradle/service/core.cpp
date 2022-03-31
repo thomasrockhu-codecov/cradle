@@ -96,59 +96,21 @@ read_file_contents(service_core& core, file_path const& path)
 
 namespace detail {
 
-namespace {
-
-void
-serialize(blob* dst, blob src)
+string
+blob_to_string(blob const& x)
 {
-    *dst = std::move(src);
+    std::ostringstream os;
+    os << "<blob - size: " << x.size() + " bytes>";
+    return os.str();
 }
 
-void
-deserialize(blob* dst, std::string src)
-{
-    *dst = make_blob(std::move(src));
-}
-
-void
-deserialize(blob* dst, std::unique_ptr<uint8_t[]> ptr, size_t size)
-{
-    *dst = blob(
-        reinterpret_pointer_cast<std::byte const>(
-            std::shared_ptr<uint8_t[]>{std::move(ptr)}),
-        size);
-}
-
-void
-serialize(blob* dst, dynamic src)
-{
-    *dst = make_blob(write_natively_encoded_value(src));
-}
-
-void
-deserialize(dynamic* dst, string x)
-{
-    *dst = read_natively_encoded_value(
-        reinterpret_cast<uint8_t const*>(x.data()), x.size());
-}
-
-void
-deserialize(dynamic* dst, std::unique_ptr<uint8_t[]> ptr, size_t size)
-{
-    *dst = read_natively_encoded_value(ptr.get(), size);
-}
-
-} // namespace
-
-} // namespace detail
-
-template<class T>
-cppcoro::task<T>
+cppcoro::task<blob>
 generic_disk_cached(
     service_core& core,
-    std::string key,
-    std::function<cppcoro::task<T>()> create_task)
+    id_interface const& id_key,
+    std::function<cppcoro::task<blob>()> create_task)
 {
+    std::string key{boost::lexical_cast<std::string>(id_key)};
     // Check the cache for an existing value.
     auto& cache = core.internals().disk_cache;
     try
@@ -163,11 +125,9 @@ generic_disk_cached(
                 auto natively_encoded_data = base64_decode(
                     *entry->value, get_mime_base64_character_set());
 
-                T x;
-                detail::deserialize(&x, std::move(natively_encoded_data));
+                blob x{make_blob(std::move(natively_encoded_data))};
                 spdlog::get("cradle")->debug(
-                    "deserialized: {}",
-                    boost::lexical_cast<std::string>(to_dynamic(x)));
+                    "deserialized: {}", blob_to_string(x));
                 co_return x;
             }
             else
@@ -193,9 +153,11 @@ generic_disk_cached(
                 if (crc.checksum() == entry->crc32)
                 {
                     spdlog::get("cradle")->debug("decoding", key);
-                    T decoded;
-                    detail::deserialize(
-                        &decoded, std::move(decompressed_data), original_size);
+                    blob decoded{
+                        reinterpret_pointer_cast<std::byte const>(
+                            std::shared_ptr<uint8_t[]>{
+                                std::move(decompressed_data)}),
+                        original_size};
                     spdlog::get("cradle")->debug("returning", key);
                     co_return decoded;
                 }
@@ -219,20 +181,18 @@ generic_disk_cached(
         auto& cache = core.internals().disk_cache;
         try
         {
-            blob encoded_data;
-            detail::serialize(&encoded_data, std::move(result));
-            if (encoded_data.size() > 1024)
+            if (result.size() > 1024)
             {
                 size_t max_compressed_size
-                    = lz4::max_compressed_size(encoded_data.size());
+                    = lz4::max_compressed_size(result.size());
 
                 std::unique_ptr<uint8_t[]> compressed_data(
                     new uint8_t[max_compressed_size]);
                 size_t actual_compressed_size = lz4::compress(
                     compressed_data.get(),
                     max_compressed_size,
-                    encoded_data.data(),
-                    encoded_data.size());
+                    result.data(),
+                    result.size());
 
                 auto cache_id = cache.initiate_insert(key);
                 {
@@ -247,17 +207,16 @@ generic_disk_cached(
                         actual_compressed_size);
                 }
                 boost::crc_32_type crc;
-                crc.process_bytes(encoded_data.data(), encoded_data.size());
-                cache.finish_insert(
-                    cache_id, crc.checksum(), encoded_data.size());
+                crc.process_bytes(result.data(), result.size());
+                cache.finish_insert(cache_id, crc.checksum(), result.size());
             }
             else
             {
                 cache.insert(
                     key,
                     base64_encode(
-                        reinterpret_cast<uint8_t const*>(encoded_data.data()),
-                        encoded_data.size(),
+                        reinterpret_cast<uint8_t const*>(result.data()),
+                        result.size(),
                         get_mime_base64_character_set()));
             }
         }
@@ -273,44 +232,38 @@ generic_disk_cached(
     co_return result;
 }
 
-cppcoro::task<dynamic>
-disk_cached(
-    service_core& core,
-    std::string key,
-    std::function<cppcoro::task<dynamic>()> create_task)
-{
-    return generic_disk_cached<dynamic>(
-        core, std::move(key), std::move(create_task));
-}
+} // namespace detail
 
-cppcoro::task<dynamic>
-disk_cached(
-    service_core& core,
-    id_interface const& key,
-    std::function<cppcoro::task<dynamic>()> create_task)
-{
-    return generic_disk_cached<dynamic>(
-        core, boost::lexical_cast<std::string>(key), std::move(create_task));
-}
-
-cppcoro::task<blob>
-disk_cached(
-    service_core& core,
-    std::string key,
-    std::function<cppcoro::task<blob>()> create_task)
-{
-    return generic_disk_cached<blob>(
-        core, std::move(key), std::move(create_task));
-}
-
+template<>
 cppcoro::task<blob>
 disk_cached(
     service_core& core,
     id_interface const& key,
     std::function<cppcoro::task<blob>()> create_task)
 {
-    return generic_disk_cached<blob>(
-        core, boost::lexical_cast<std::string>(key), std::move(create_task));
+    return detail::generic_disk_cached(core, key, std::move(create_task));
+}
+
+template<>
+cppcoro::task<dynamic>
+disk_cached(
+    service_core& core,
+    id_interface const& key,
+    std::function<cppcoro::task<dynamic>()> create_task)
+{
+    auto dynamic_to_blob = [](dynamic x) -> blob {
+        return make_blob(write_natively_encoded_value(x));
+    };
+    auto create_blob_task = [&]() {
+        return cppcoro::make_task(
+            cppcoro::fmap(dynamic_to_blob, create_task()));
+    };
+    auto blob_to_dynamic = [](blob x) {
+        auto data = reinterpret_cast<uint8_t const*>(x.data());
+        return read_natively_encoded_value(data, x.size());
+    };
+    blob x = co_await detail::generic_disk_cached(core, key, create_blob_task);
+    co_return blob_to_dynamic(x);
 }
 
 void

@@ -1,6 +1,8 @@
 #ifndef TESTS_UNIT_INTROSPECTION_TASKLET_TESTING_H
 #define TESTS_UNIT_INTROSPECTION_TASKLET_TESTING_H
 
+#include <cradle/introspection/tasklet_impl.h>
+
 namespace cradle {
 
 /**

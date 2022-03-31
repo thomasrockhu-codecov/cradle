@@ -146,7 +146,7 @@ wrap_task_creator(CreateTask&& create_task)
     return [create_task = std::forward<CreateTask>(create_task)](
                immutable_cache& cache, id_interface const& key) {
         return cache_task_wrapper<Value>(
-            cache, captured_id{key}, create_task());
+            cache, captured_id{key}, create_task(key));
     };
 }
 

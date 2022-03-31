@@ -68,7 +68,7 @@ TEST_CASE("basic immutable cache usage", "[immutable_cache]")
             "The first time an immutable_cache_ptr is attached to a key, its"
             ":create_job callback is invoked.");
         bool p_needed_creation = false;
-        p.reset(cache, make_id(0), [&] {
+        p.reset(cache, make_id(0), [&](id_interface const&) {
             p_needed_creation = true;
             return test_task(42);
         });
@@ -90,7 +90,7 @@ TEST_CASE("basic immutable cache usage", "[immutable_cache]")
     }
 
     bool q_needed_creation = false;
-    immutable_cache_ptr<int> q(cache, make_id(1), [&] {
+    immutable_cache_ptr<int> q(cache, make_id(1), [&](id_interface const&) {
         q_needed_creation = true;
         return test_task(112);
     });
@@ -117,7 +117,7 @@ TEST_CASE("basic immutable cache usage", "[immutable_cache]")
     }
 
     bool r_needed_creation = false;
-    immutable_cache_ptr<int> r(cache, make_id(0), [&] {
+    immutable_cache_ptr<int> r(cache, make_id(0), [&](id_interface const&) {
         r_needed_creation = true;
         return test_task(42);
     });
@@ -211,7 +211,9 @@ TEST_CASE("basic immutable cache usage", "[immutable_cache]")
     {
         INFO("Recreating q will retrieve the entry from the eviction list.");
 
-        q.reset(cache, make_id(1), [&] { return test_task(112); });
+        q.reset(cache, make_id(1), [&](id_interface const&) {
+            return test_task(112);
+        });
         REQUIRE(q.is_ready());
         REQUIRE(await_cache_value(q) == 112);
 
@@ -260,19 +262,21 @@ TEST_CASE("immutable cache LRU eviction", "[immutable_cache]")
 
     // Declare an interest in ID(1).
     bool p_needed_creation = false;
-    immutable_cache_ptr<std::string> p(cache, make_id(1), [&] {
-        p_needed_creation = true;
-        return one_kb_string_task('a');
-    });
+    immutable_cache_ptr<std::string> p(
+        cache, make_id(1), [&](id_interface const&) {
+            p_needed_creation = true;
+            return one_kb_string_task('a');
+        });
     REQUIRE(p_needed_creation);
     REQUIRE(await_cache_value(p) == std::string(1024, 'a'));
 
     // Declare an interest in ID(2).
     bool q_needed_creation = false;
-    immutable_cache_ptr<std::string> q(cache, make_id(2), [&] {
-        q_needed_creation = true;
-        return one_kb_string_task('b');
-    });
+    immutable_cache_ptr<std::string> q(
+        cache, make_id(2), [&](id_interface const&) {
+            q_needed_creation = true;
+            return one_kb_string_task('b');
+        });
     REQUIRE(q_needed_creation);
     REQUIRE(await_cache_value(q) == std::string(1024, 'b'));
 
@@ -283,20 +287,22 @@ TEST_CASE("immutable cache LRU eviction", "[immutable_cache]")
 
     // If we redeclare interest in ID(1), it should require creation.
     bool r_needed_creation = false;
-    immutable_cache_ptr<std::string> r(cache, make_id(1), [&] {
-        r_needed_creation = true;
-        return one_kb_string_task('a');
-    });
+    immutable_cache_ptr<std::string> r(
+        cache, make_id(1), [&](id_interface const&) {
+            r_needed_creation = true;
+            return one_kb_string_task('a');
+        });
     REQUIRE(r_needed_creation);
     REQUIRE(!r.is_ready());
     REQUIRE(await_cache_value(r) == std::string(1024, 'a'));
 
     // If we redeclare interest in ID(2), it should NOT require creation.
     bool s_needed_creation = false;
-    immutable_cache_ptr<std::string> s(cache, make_id(2), [&] {
-        s_needed_creation = true;
-        return one_kb_string_task('b');
-    });
+    immutable_cache_ptr<std::string> s(
+        cache, make_id(2), [&](id_interface const&) {
+            s_needed_creation = true;
+            return one_kb_string_task('b');
+        });
     REQUIRE(!s_needed_creation);
     REQUIRE(s.is_ready());
     REQUIRE(await_cache_value(s) == std::string(1024, 'b'));

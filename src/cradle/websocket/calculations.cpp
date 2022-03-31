@@ -68,9 +68,11 @@ perform_lambda_calc(
         make_id(natively_encoded_sha256(args)));
 
     auto await_guard = tasklet_await(ctx.tasklet, function_name, cache_key);
-    co_return co_await cached<dynamic>(ctx.service, cache_key, [&] {
-        return uncached::perform_lambda_calc(ctx, function, std::move(args));
-    });
+    co_return co_await cached<dynamic>(
+        ctx.service, cache_key, [&](id_interface const&) {
+            return uncached::perform_lambda_calc(
+                ctx, function, std::move(args));
+        });
 }
 
 cppcoro::task<std::string>

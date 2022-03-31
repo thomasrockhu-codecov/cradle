@@ -62,6 +62,8 @@ acquire_cache_record_no_lock(immutable_cache_record* record)
     }
 }
 
+// create_task() is called with a key that will live until the task has run.
+// `key` may not live long enough.
 immutable_cache_record*
 acquire_cache_record(
     immutable_cache& cache,
@@ -78,7 +80,7 @@ acquire_cache_record(
         record->eviction_list_iterator = cache.eviction_list.records.end();
         record->key.capture(key);
         record->ref_count = 0;
-        record->task = create_task(cache, key);
+        record->task = create_task(cache, *(record->key));
         i = cache.records.emplace(&*record->key, std::move(record)).first;
     }
     immutable_cache_record* record = i->second.get();
@@ -86,7 +88,7 @@ acquire_cache_record(
     if (record->state.load(std::memory_order_relaxed)
         == immutable_cache_entry_state::FAILED)
     {
-        record->task = create_task(cache, key);
+        record->task = create_task(cache, *(record->key));
         record->state.store(
             immutable_cache_entry_state::LOADING, std::memory_order_relaxed);
     }
