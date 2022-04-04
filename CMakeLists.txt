@@ -162,7 +162,7 @@ endmacro()
 
 # Enable a high level of compiler warnings and treat them as errors.
 if(IS_GCC OR IS_CLANG)
-    add_compile_options(-Wall -Werror)
+    add_compile_options(-Wall -Werror -fsanitize=address)
     # Disable warnings that are too strict.
     # unused function parameters
     add_compile_options(-Wno-unused-parameter)
@@ -330,6 +330,7 @@ target_include_directories(server PRIVATE
     ${generated_include_dir}/src
     src)
 target_link_libraries(server cradle_outer cradle_inner)
+set_target_properties(server PROPERTIES LINK_FLAGS "-fsanitize=address")
 add_custom_command(TARGET server POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:server> ${deploy_dir})
 
@@ -341,6 +342,7 @@ target_include_directories(unit_test_runner PRIVATE
     src
     tests)
 target_link_libraries(unit_test_runner cradle_outer cradle_inner)
+set_target_properties(unit_test_runner PROPERTIES LINK_FLAGS "-fsanitize=address")
 # Don't use precompiled headers for the test runner since it needs to include
 # Catch specially.
 set_source_files_properties(
@@ -414,6 +416,7 @@ target_include_directories(inner_test_runner PRIVATE
     src
     tests)
 target_link_libraries(inner_test_runner cradle_inner)
+set_target_properties(inner_test_runner PROPERTIES LINK_FLAGS "-fsanitize=address")
 # Don't use precompiled headers for the test runner since it needs to include
 # Catch specially.
 set_source_files_properties(
@@ -439,6 +442,7 @@ target_include_directories(external_test_runner PRIVATE
     ${generated_include_dir}/src
     src)
 target_link_libraries(external_test_runner cradle_outer cradle_inner)
+set_target_properties(external_test_runner PROPERTIES LINK_FLAGS "-fsanitize=address")
 # Don't use precompiled headers for the test runner since it needs to include
 # Catch specially.
 set_source_files_properties(
