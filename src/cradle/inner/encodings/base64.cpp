@@ -162,19 +162,19 @@ base64_decode(
     *dst_size = dst - dst_start;
 }
 
-string
+blob
 base64_decode(string const& encoded, base64_character_set const& character_set)
 {
-    boost::scoped_array<char> decoded(
-        new char[get_base64_decoded_length(encoded.length())]);
+    auto max_decoded_size{get_base64_decoded_length(encoded.length())};
+    auto decoded{new std::byte[max_decoded_size]};
     size_t decoded_size;
     base64_decode(
-        reinterpret_cast<uint8_t*>(decoded.get()),
+        reinterpret_cast<uint8_t*>(decoded),
         &decoded_size,
         &encoded[0],
         encoded.length(),
         character_set);
-    return string(decoded.get(), decoded.get() + decoded_size);
+    return blob{std::shared_ptr<std::byte const>(decoded), decoded_size};
 }
 
 } // namespace cradle

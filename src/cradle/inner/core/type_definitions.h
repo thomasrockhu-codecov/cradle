@@ -3,6 +3,8 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
+#include <vector>
 
 #include <boost/cstdint.hpp>
 

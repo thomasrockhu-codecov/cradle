@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <string>
 
+#include <cradle/inner/core/type_definitions.h>
+
 // This file provides functions for converting raw binary data to and from a
 // base64 ASCII encoding. The characters used to represent the 64 values are
 // specified as a function parameter. Two obvious choices are provided here:
@@ -92,7 +94,7 @@ base64_decode(
     base64_character_set const& character_set);
 
 // Same as above, but operates on strings.
-std::string
+blob
 base64_decode(
     std::string const& encoded, base64_character_set const& character_set);
 

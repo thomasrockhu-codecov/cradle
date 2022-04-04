@@ -85,10 +85,8 @@ generic_disk_cached(
 
             if (entry->value)
             {
-                auto blob_data = base64_decode(
-                    *entry->value, get_mime_base64_character_set());
-
-                blob x{make_blob(std::move(blob_data))};
+                blob x{base64_decode(
+                    *entry->value, get_mime_base64_character_set())};
                 spdlog::get("cradle")->debug(
                     "deserialized: {}", blob_to_string(x));
                 co_return x;

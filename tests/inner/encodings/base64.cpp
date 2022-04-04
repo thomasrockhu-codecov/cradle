@@ -4,6 +4,7 @@
 #include <catch2/catch.hpp>
 
 #include <cradle/inner/utilities/text.h>
+#include <cradle/inner/core/type_interfaces.h>
 
 using std::string;
 using namespace cradle;
@@ -34,12 +35,12 @@ test_base64_encoding(
 
     // Check that decoding the encoded form gives the original string.
     auto decoded = base64_decode(encoded, character_set);
-    REQUIRE(decoded == original);
+    REQUIRE(decoded == make_blob(original));
 
     // Check that the decoded length calculation is within spec.
     {
         auto calculated = get_base64_decoded_length(encoded.length());
-        auto actual = decoded.length();
+        auto actual = decoded.size();
         REQUIRE(calculated - 2 <= actual);
         REQUIRE(actual <= calculated);
     }
@@ -88,13 +89,13 @@ TEST_CASE("missing base64 padding", "[encodings][base64]")
         base64_decode(
             "UHJvaW4gc29sbGljaXR1ZGluIGN1cnN1cyBiaWJlbmR1bQ",
             get_mime_base64_character_set())
-        == string("Proin sollicitudin cursus bibendum"));
+        == make_blob(string("Proin sollicitudin cursus bibendum")));
 
     REQUIRE(
         base64_decode(
             "UHJvaW4gc29sbGljaXR1ZGluIGN1cnN1cyBiaWJlbmR1bQ=",
             get_mime_base64_character_set())
-        == string("Proin sollicitudin cursus bibendum"));
+        == make_blob(string("Proin sollicitudin cursus bibendum")));
 
     REQUIRE(
         base64_decode(
@@ -102,7 +103,7 @@ TEST_CASE("missing base64 padding", "[encodings][base64]")
             "m"
             "cgZWxpdC4",
             get_mime_base64_character_set())
-        == string("Lorem ipsum dolor sit amet, consectetur adipiscing elit."));
+        == make_blob(string("Lorem ipsum dolor sit amet, consectetur adipiscing elit.")));
 }
 
 // Test that attempting to base64 decode the given string produces a parsing
