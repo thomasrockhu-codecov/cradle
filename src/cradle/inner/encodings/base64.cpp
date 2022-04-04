@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <sstream>
 
+#include <cradle/inner/utilities/arrays.h>
 #include <cradle/inner/utilities/text.h>
 
 using std::string;
@@ -167,6 +168,7 @@ base64_decode(string const& encoded, base64_character_set const& character_set)
 {
     auto max_decoded_size{get_base64_decoded_length(encoded.length())};
     auto decoded{new std::byte[max_decoded_size]};
+    std::shared_ptr<std::byte const> ptr{decoded, array_deleter<std::byte>()};
     size_t decoded_size;
     base64_decode(
         reinterpret_cast<uint8_t*>(decoded),
@@ -174,7 +176,7 @@ base64_decode(string const& encoded, base64_character_set const& character_set)
         &encoded[0],
         encoded.length(),
         character_set);
-    return blob{std::shared_ptr<std::byte const>(decoded), decoded_size};
+    return blob{ptr, decoded_size};
 }
 
 } // namespace cradle

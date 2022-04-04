@@ -63,7 +63,7 @@ string
 blob_to_string(blob const& x)
 {
     std::ostringstream os;
-    os << "<blob - size: " << x.size() + " bytes>";
+    os << "<blob - size: " << x.size() << " bytes>";
     return os.str();
 }
 

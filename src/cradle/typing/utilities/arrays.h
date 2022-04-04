@@ -4,18 +4,9 @@
 #include <string>
 
 #include <cradle/inner/core/exception.h>
+#include <cradle/inner/utilities/arrays.h>
 
 namespace cradle {
-
-template<typename T>
-struct array_deleter
-{
-    void
-    operator()(T* p)
-    {
-        delete[] p;
-    }
-};
 
 // Check that an index is in bounds.
 // :index must be nonnegative and strictly less than :upper_bound to pass.
