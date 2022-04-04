@@ -103,12 +103,9 @@ disk_cached(
         return cppcoro::make_task(
             cppcoro::fmap(dynamic_to_blob, create_task()));
     };
-    auto blob_to_dynamic = [](blob x) {
-        auto data = reinterpret_cast<uint8_t const*>(x.data());
-        return read_natively_encoded_value(data, x.size());
-    };
     blob x = co_await disk_cached<blob>(core, key, create_blob_task);
-    co_return blob_to_dynamic(x);
+    auto data = reinterpret_cast<uint8_t const*>(x.data());
+    co_return read_natively_encoded_value(data, x.size());
 }
 
 void

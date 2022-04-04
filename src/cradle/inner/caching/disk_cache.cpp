@@ -554,7 +554,7 @@ shut_down(disk_cache_impl& cache)
 static void
 open_and_check_db(disk_cache_impl& cache)
 {
-    int const expected_database_version = 2;
+    int const expected_database_version = 3;
 
     open_db(&cache.db, cache.dir / "index.db");
 
