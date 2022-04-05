@@ -1,6 +1,6 @@
-#include <cradle/io/endian.h>
+#include <cradle/typing/io/endian.h>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

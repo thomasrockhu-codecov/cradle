@@ -1,10 +1,10 @@
 #include <cppcoro/sync_wait.hpp>
 
-#include <cradle/encodings/msgpack.h>
 #include <cradle/external_api.h>
-#include <cradle/introspection/tasklet.h>
-#include <cradle/service/core.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/inner/introspection/tasklet.h>
+#include <cradle/typing/encodings/msgpack.h>
+#include <cradle/typing/service/core.h>
+#include <cradle/typing/utilities/testing.h>
 #include <cradle/websocket/calculations.h>
 
 #include "test_session.h"

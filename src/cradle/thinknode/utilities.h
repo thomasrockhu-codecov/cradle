@@ -4,8 +4,8 @@
 #include <cppcoro/task.hpp>
 #include <spdlog/spdlog.h>
 
-#include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
+#include <cradle/typing/service/core.h>
 
 namespace cradle {
 

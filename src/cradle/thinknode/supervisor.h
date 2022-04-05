@@ -1,9 +1,9 @@
 #ifndef CRADLE_THINKNODE_SUPERVISOR_H
 #define CRADLE_THINKNODE_SUPERVISOR_H
 
-#include <cradle/core.h>
-#include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
+#include <cradle/typing/core.h>
+#include <cradle/typing/service/core.h>
 
 namespace cradle {
 

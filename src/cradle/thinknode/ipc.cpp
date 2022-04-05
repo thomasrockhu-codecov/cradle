@@ -1,9 +1,9 @@
-#include <cradle/io/asio.h>
+#include <cradle/typing/io/asio.h>
 
 #include <cradle/thinknode/ipc.h>
 
-#include <cradle/encodings/msgpack_internals.h>
-#include <cradle/io/raw_memory_io.h>
+#include <cradle/typing/encodings/msgpack_internals.h>
+#include <cradle/typing/io/raw_memory_io.h>
 
 namespace cradle {
 

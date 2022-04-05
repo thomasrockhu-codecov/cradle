@@ -2,9 +2,9 @@
 
 #include <boost/program_options.hpp>
 
-#include <cradle/encodings/json.h>
-#include <cradle/fs/app_dirs.h>
-#include <cradle/fs/file_io.h>
+#include <cradle/inner/fs/app_dirs.h>
+#include <cradle/inner/fs/file_io.h>
+#include <cradle/typing/encodings/json.h>
 #include <cradle/version_info.hpp>
 
 using namespace cradle;

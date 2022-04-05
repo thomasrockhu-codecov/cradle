@@ -47,7 +47,7 @@ make_service_config(api_service_config const& config)
     cradle::service_config result;
     if (config.memory_cache_unused_size_limit)
     {
-        result.immutable_cache = cradle::immutable_cache_config{};
+        result.immutable_cache = cradle::service_immutable_cache_config{};
         result.immutable_cache->unused_size_limit
             = config.memory_cache_unused_size_limit.value();
     }
@@ -60,12 +60,8 @@ make_service_config(api_service_config const& config)
                 << reason_info("config.disk_cache_directory given but not "
                                "config.disk_cache_size_limit"));
         }
-        result.disk_cache = cradle::disk_cache_config{};
-        if (config.disk_cache_directory)
-        {
-            result.disk_cache->directory = config.disk_cache_directory.value();
-        }
-        result.disk_cache->size_limit = config.disk_cache_size_limit.value();
+        result.disk_cache = cradle::service_disk_cache_config(
+            config.disk_cache_directory, config.disk_cache_size_limit.value());
     }
     result.request_concurrency = config.request_concurrency;
     result.compute_concurrency = config.compute_concurrency;

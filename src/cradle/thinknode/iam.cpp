@@ -1,9 +1,9 @@
 #include <cradle/thinknode/iam.h>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/encodings/sha256_hash_id.h>
-#include <cradle/io/http_requests.hpp>
 #include <cradle/thinknode/utilities.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/encodings/sha256_hash_id.h>
+#include <cradle/typing/io/http_requests.hpp>
 
 namespace cradle {
 

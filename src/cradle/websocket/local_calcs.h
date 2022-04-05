@@ -6,9 +6,9 @@
 
 #include <cppcoro/static_thread_pool.hpp>
 
-#include <cradle/introspection/tasklet.h>
-#include <cradle/service/core.h>
+#include <cradle/inner/introspection/tasklet.h>
 #include <cradle/thinknode/types.hpp>
+#include <cradle/typing/service/core.h>
 
 namespace cradle {
 

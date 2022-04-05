@@ -1,10 +1,10 @@
-#include <cradle/io/asio.h>
+#include <cradle/typing/io/asio.h>
 
 #include <websocketpp/client.hpp>
 #include <websocketpp/config/asio_no_tls_client.hpp>
 
-#include <cradle/encodings/msgpack.h>
-#include <cradle/utilities/errors.h>
+#include <cradle/inner/utilities/errors.h>
+#include <cradle/typing/encodings/msgpack.h>
 #include <cradle/websocket/client.h>
 #include <cradle/websocket/messages.hpp>
 

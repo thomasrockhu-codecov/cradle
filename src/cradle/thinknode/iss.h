@@ -1,8 +1,8 @@
 #ifndef CRADLE_THINKNODE_ISS_H
 #define CRADLE_THINKNODE_ISS_H
 
-#include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
+#include <cradle/typing/service/core.h>
 
 namespace cradle {
 

@@ -2,15 +2,15 @@
 
 #include <fmt/format.h>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/encodings/json.h>
-#include <cradle/encodings/sha256_hash_id.h>
-#include <cradle/io/http_requests.hpp>
+#include <cradle/inner/utilities/errors.h>
+#include <cradle/inner/utilities/functional.h>
 #include <cradle/thinknode/iss.h>
 #include <cradle/thinknode/utilities.h>
-#include <cradle/utilities/errors.h>
-#include <cradle/utilities/functional.h>
-#include <cradle/utilities/logging.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/encodings/json.h>
+#include <cradle/typing/encodings/sha256_hash_id.h>
+#include <cradle/typing/io/http_requests.hpp>
+#include <cradle/typing/utilities/logging.h>
 
 namespace cradle {
 

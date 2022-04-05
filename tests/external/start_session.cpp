@@ -1,6 +1,6 @@
 #include <cradle/external_api.h>
-#include <cradle/service/core.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/service/core.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

@@ -1,7 +1,7 @@
-#include <cradle/encodings/yaml.h>
+#include <cradle/typing/encodings/yaml.h>
 
-#include <cradle/utilities/testing.h>
-#include <cradle/utilities/text.h>
+#include <cradle/inner/utilities/text.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

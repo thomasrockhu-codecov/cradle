@@ -1,0 +1,474 @@
+#include <cradle/websocket/calculations.h>
+
+#include <thread>
+
+#include <cppcoro/sync_wait.hpp>
+
+#include <cradle/typing/utilities/testing.h>
+
+#include <cradle/inner/encodings/base64.h>
+#include <cradle/inner/utilities/environment.h>
+#include <cradle/websocket/messages.hpp>
+
+using namespace cradle;
+
+namespace {
+
+// Test all the relevant ID operations on a pair of equal IDs.
+static void
+test_equal_ids(id_interface const& a, id_interface const& b)
+{
+    REQUIRE(a == b);
+    REQUIRE(b == a);
+    REQUIRE(!(a < b));
+    REQUIRE(!(b < a));
+    REQUIRE(a.hash() == b.hash());
+    auto a_string = boost::lexical_cast<std::string>(a);
+    auto b_string = boost::lexical_cast<std::string>(b);
+    REQUIRE(a_string == b_string);
+}
+
+// Test all the ID operations on a pair of different IDs.
+void
+test_different_ids(
+    id_interface const& a, id_interface const& b, bool ignore_strings = false)
+{
+    REQUIRE(a != b);
+    REQUIRE((a < b && !(b < a) || b < a && !(a < b)));
+    REQUIRE(a.hash() != b.hash());
+    auto a_string = boost::lexical_cast<std::string>(a);
+    auto b_string = boost::lexical_cast<std::string>(b);
+    // Raw function pointers are implicitly converted to bool
+    if (!ignore_strings)
+    {
+        REQUIRE(a_string != b_string);
+    }
+}
+
+int
+add(int x, int y)
+{
+    return x + y;
+}
+
+int
+subtract(int x, int y)
+{
+    return x - y;
+}
+
+} // namespace
+
+TEST_CASE("function IDs", "[calcs][ws]")
+{
+    auto lambda_add = [](int x, int y) { return x + y; };
+    auto lambda_subtract = [](int x, int y) { return x - y; };
+
+    test_equal_ids(make_function_id(add), make_function_id(add));
+    test_equal_ids(make_function_id(subtract), make_function_id(subtract));
+    test_different_ids(
+        make_function_id(add), make_function_id(subtract), true);
+
+    test_equal_ids(make_function_id(lambda_add), make_function_id(lambda_add));
+    test_equal_ids(
+        make_function_id(lambda_subtract), make_function_id(lambda_subtract));
+    test_different_ids(
+        make_function_id(lambda_add), make_function_id(lambda_subtract));
+
+    test_different_ids(make_function_id(add), make_function_id(lambda_add));
+    test_different_ids(
+        make_function_id(subtract), make_function_id(lambda_subtract));
+
+    captured_id captured(make_function_id(add));
+    REQUIRE(captured.matches(make_function_id(add)));
+    REQUIRE(!captured.matches(make_function_id(subtract)));
+    REQUIRE(!captured.matches(make_function_id(lambda_add)));
+
+    captured.capture(make_function_id(lambda_add));
+    REQUIRE(captured.matches(make_function_id(lambda_add)));
+    REQUIRE(!captured.matches(make_function_id(lambda_subtract)));
+    REQUIRE(!captured.matches(make_function_id(add)));
+}
+
+namespace {
+
+dynamic
+dynamic_subtract(dynamic_array args, tasklet_tracker*)
+{
+    return cast<double>(args.at(0)) - cast<double>(args.at(1));
+}
+
+} // namespace
+
+TEST_CASE("individual calcs", "[calcs][ws]")
+{
+    service_core core;
+    init_test_service(core);
+
+    thinknode_session session;
+    session.api_url = "https://mgh.thinknode.io/api/v1.0";
+    session.access_token
+        = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
+
+    thinknode_request_context trc{core, session, nullptr};
+    auto eval = [&](calculation_request const& request) {
+        return cppcoro::sync_wait(resolve_calc_to_value(
+            trc, "5dadeb4a004073e81b5e096255e83652", request));
+    };
+
+    // value
+    REQUIRE(
+        eval(make_calculation_request_with_value(dynamic{2.5}))
+        == dynamic{2.5});
+    REQUIRE(
+        eval(make_calculation_request_with_value(dynamic{"foobar"}))
+        == dynamic{"foobar"});
+    REQUIRE(
+        eval(make_calculation_request_with_value(dynamic({1.0, true, "x"})))
+        == dynamic({1.0, true, "x"}));
+
+    // reference
+    REQUIRE(
+        eval(make_calculation_request_with_reference(
+            "5abd360900c0b14726b4ba1e6e5cdc12"))
+        == dynamic(
+            {{"demographics",
+              {
+                  {"birthdate", {{"some", "1800-01-01"}}},
+                  {"sex", {{"some", "o"}}},
+              }},
+             {"medical_record_number", "017-08-01"},
+             {"name",
+              {{"family_name", "Astroid"},
+               {"given_name", "v2"},
+               {"middle_name", ""},
+               {"prefix", ""},
+               {"suffix", ""}}}}));
+
+#ifdef LOCAL_DOCKER_TESTING
+    // function
+    REQUIRE(
+        eval(make_calculation_request_with_function(make_function_application(
+            "mgh",
+            "dosimetry",
+            "addition",
+            execution_host_selection::LOCAL,
+            none,
+            {make_calculation_request_with_value(dynamic(2.0)),
+             make_calculation_request_with_value(dynamic(0.125))})))
+        == dynamic(2.125));
+#endif
+
+    // lambda w/ actual lambda
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            make_function([](dynamic_array args, tasklet_tracker*) {
+                return cast<double>(args.at(0)) - cast<double>(args.at(1));
+            }),
+            {make_calculation_request_with_value(dynamic(7.0)),
+             make_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(6.0));
+
+    // lambda w/ function pointer
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            make_function(dynamic_subtract),
+            {make_calculation_request_with_value(dynamic(8.0)),
+             make_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(7.0));
+
+    // array
+    REQUIRE(
+        eval(make_calculation_request_with_array(make_array_calc_request(
+            {make_calculation_request_with_value(dynamic(integer(2))),
+             make_calculation_request_with_value(dynamic(integer(0))),
+             make_calculation_request_with_value(dynamic(integer(3)))},
+            make_thinknode_type_info_with_integer_type(
+                make_thinknode_integer_type()))))
+        == dynamic({integer(2), integer(0), integer(3)}));
+
+    // item
+    REQUIRE(
+        eval(make_calculation_request_with_item(make_item_calc_request(
+            make_calculation_request_with_value(
+                dynamic({integer(2), integer(0), integer(3)})),
+            make_calculation_request_with_value(dynamic(integer(1))),
+            make_thinknode_type_info_with_integer_type(
+                make_thinknode_integer_type()))))
+        == dynamic(integer(0)));
+
+    // object
+    REQUIRE(
+        eval(make_calculation_request_with_object(make_object_calc_request(
+            {{"two", make_calculation_request_with_value(dynamic(integer(2)))},
+             {"oh", make_calculation_request_with_value(dynamic(integer(0)))},
+             {"three",
+              make_calculation_request_with_value(dynamic(integer(3)))}},
+            make_thinknode_type_info_with_structure_type(
+                make_thinknode_structure_info(
+                    {{"two",
+                      make_thinknode_structure_field_info(
+                          "the two",
+                          some(false),
+                          make_thinknode_type_info_with_integer_type(
+                              make_thinknode_integer_type()))},
+                     {"oh",
+                      make_thinknode_structure_field_info(
+                          "the oh",
+                          some(false),
+                          make_thinknode_type_info_with_integer_type(
+                              make_thinknode_integer_type()))},
+                     {"three",
+                      make_thinknode_structure_field_info(
+                          "the three",
+                          some(false),
+                          make_thinknode_type_info_with_integer_type(
+                              make_thinknode_integer_type()))}})))))
+        == dynamic(
+            {{"two", integer(2)}, {"oh", integer(0)}, {"three", integer(3)}}));
+
+    // property
+    REQUIRE(
+        eval(make_calculation_request_with_property(make_property_calc_request(
+            make_calculation_request_with_value(dynamic(
+                {{"two", integer(2)},
+                 {"oh", integer(0)},
+                 {"three", integer(3)}})),
+            make_calculation_request_with_value(dynamic("oh")),
+            make_thinknode_type_info_with_integer_type(
+                make_thinknode_integer_type()))))
+        == dynamic(integer(0)));
+
+    // let/variable
+    REQUIRE(
+        eval(make_calculation_request_with_let(make_let_calc_request(
+            {{"x", make_calculation_request_with_value(dynamic(integer(2)))}},
+            make_calculation_request_with_variable("x"))))
+        == dynamic(integer(2)));
+
+    // meta
+    REQUIRE(
+        eval(make_calculation_request_with_meta(make_meta_calc_request(
+            make_calculation_request_with_value(
+                dynamic({{"value", integer(1)}})),
+            make_thinknode_type_info_with_integer_type(
+                make_thinknode_integer_type()))))
+        == dynamic(integer(1)));
+
+    // cast
+    REQUIRE(
+        eval(make_calculation_request_with_cast(make_cast_calc_request(
+            make_thinknode_type_info_with_integer_type(
+                make_thinknode_integer_type()),
+            make_calculation_request_with_value(dynamic(0.0)))))
+        == dynamic(integer(0)));
+}
+
+TEST_CASE("lambda calc caching", "[calcs][ws]")
+{
+    service_core core;
+    init_test_service(core);
+
+    thinknode_session session;
+
+    int call_count = 0;
+
+    auto add = make_function([&](dynamic_array args, tasklet_tracker*) {
+        ++call_count;
+        return cast<double>(args.at(0)) + cast<double>(args.at(1));
+    });
+
+    thinknode_request_context trc{core, session, nullptr};
+    auto eval = [&](calculation_request const& request) {
+        return cppcoro::sync_wait(resolve_calc_to_value(
+            trc, "5dadeb4a004073e81b5e096255e83652", request));
+    };
+
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            add,
+            {make_calculation_request_with_value(dynamic(1.0)),
+             make_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(2.0));
+    REQUIRE(call_count == 1);
+
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            add,
+            {make_calculation_request_with_value(dynamic(1.0)),
+             make_calculation_request_with_value(dynamic(2.0))})))
+        == dynamic(3.0));
+    REQUIRE(call_count == 2);
+
+    REQUIRE(
+        eval(make_calculation_request_with_lambda(make_lambda_calculation(
+            add,
+            {make_calculation_request_with_value(dynamic(1.0)),
+             make_calculation_request_with_value(dynamic(1.0))})))
+        == dynamic(2.0));
+    REQUIRE(call_count == 2);
+}
+
+TEST_CASE("mixed calcs", "[calcs][ws]")
+{
+    service_core core;
+    init_test_service(core);
+
+    thinknode_session session;
+    session.api_url = "https://mgh.thinknode.io/api/v1.0";
+    session.access_token
+        = get_environment_variable("CRADLE_THINKNODE_API_TOKEN");
+
+    thinknode_request_context trc{core, session, nullptr};
+    auto eval = [&](calculation_request const& request) {
+        return cppcoro::sync_wait(resolve_calc_to_value(
+            trc, "5dadeb4a004073e81b5e096255e83652", request));
+    };
+
+#ifdef LOCAL_DOCKER_TESTING
+    auto local_calc
+        = make_calculation_request_with_function(make_function_application(
+            "mgh",
+            "dosimetry",
+            "addition",
+            execution_host_selection::LOCAL,
+            none,
+            {make_calculation_request_with_value(dynamic(1.0)),
+             make_calculation_request_with_value(dynamic(2.0))}));
+#else
+    auto local_calc = make_calculation_request_with_value(dynamic(3.0));
+#endif
+
+    auto remote_calc
+        = make_calculation_request_with_function(make_function_application(
+            "mgh",
+            "dosimetry",
+            "addition",
+            execution_host_selection::THINKNODE,
+            none,
+            {make_calculation_request_with_value(dynamic(3.0)), local_calc}));
+
+    auto lambda_calc
+        = make_calculation_request_with_lambda(make_lambda_calculation(
+            make_function([](dynamic_array args, tasklet_tracker*) {
+                return cast<double>(args.at(0)) - cast<double>(args.at(1));
+            }),
+            {make_calculation_request_with_value(dynamic(7.0)), remote_calc}));
+
+    auto function_pointer_calc
+        = make_calculation_request_with_lambda(make_lambda_calculation(
+            make_function(dynamic_subtract),
+            {make_calculation_request_with_value(dynamic(8.0)), lambda_calc}));
+
+    REQUIRE(eval(function_pointer_calc) == dynamic(7.0));
+}
+
+TEST_CASE("Thinknode calc conversion", "[calcs][ws]")
+{
+    // value
+    auto original_value
+        = make_thinknode_calc_request_with_value(dynamic("xyz"));
+    auto converted_value = make_calculation_request_with_value(dynamic("xyz"));
+    REQUIRE(as_generic_calc(original_value) == converted_value);
+
+    // reference
+    auto original_reference = make_thinknode_calc_request_with_reference("a");
+    auto converted_reference = make_calculation_request_with_reference("a");
+    REQUIRE(as_generic_calc(original_reference) == converted_reference);
+
+    // function
+    REQUIRE(
+        as_generic_calc(make_thinknode_calc_request_with_function(
+            make_thinknode_function_application(
+                "my_account",
+                "my_name",
+                "my_function",
+                none,
+                {original_value, original_reference})))
+        == make_calculation_request_with_function(make_function_application(
+            "my_account",
+            "my_name",
+            "my_function",
+            execution_host_selection::THINKNODE,
+            none,
+            {converted_value, converted_reference})));
+
+    // array
+    auto item_schema
+        = make_thinknode_type_info_with_string_type(thinknode_string_type());
+    auto original_array
+        = make_thinknode_calc_request_with_array(make_thinknode_array_calc(
+            {original_value, original_reference}, item_schema));
+    auto converted_array
+        = make_calculation_request_with_array(make_array_calc_request(
+            {converted_value, converted_reference}, item_schema));
+    REQUIRE(as_generic_calc(original_array) == converted_array);
+
+    // item
+    auto original_item
+        = make_thinknode_calc_request_with_item(make_thinknode_item_calc(
+            original_array,
+            make_thinknode_calc_request_with_value(dynamic(integer(0))),
+            item_schema));
+    auto converted_item
+        = make_calculation_request_with_item(make_item_calc_request(
+            converted_array,
+            make_calculation_request_with_value(dynamic(integer(0))),
+            item_schema));
+    REQUIRE(as_generic_calc(original_item) == converted_item);
+
+    // object
+    auto object_schema = make_thinknode_type_info_with_structure_type(
+        make_thinknode_structure_info({
+            {"i", make_thinknode_structure_field_info("", none, item_schema)},
+            {"j", make_thinknode_structure_field_info("", none, item_schema)},
+        }));
+    auto original_object
+        = make_thinknode_calc_request_with_object(make_thinknode_object_calc(
+            {{"i", original_value}, {"j", original_reference}},
+            object_schema));
+    auto converted_object
+        = make_calculation_request_with_object(make_object_calc_request(
+            {{"i", converted_value}, {"j", converted_reference}},
+            object_schema));
+    REQUIRE(as_generic_calc(original_object) == converted_object);
+
+    // property
+    auto original_property = make_thinknode_calc_request_with_property(
+        make_thinknode_property_calc(
+            original_object,
+            make_thinknode_calc_request_with_value(dynamic("j")),
+            item_schema));
+    auto converted_property
+        = make_calculation_request_with_property(make_property_calc_request(
+            converted_object,
+            make_calculation_request_with_value(dynamic("j")),
+            item_schema));
+    REQUIRE(as_generic_calc(original_property) == converted_property);
+
+    // let
+    REQUIRE(
+        as_generic_calc(
+            make_thinknode_calc_request_with_let(make_thinknode_let_calc(
+                std::map<string, thinknode_calc_request>{
+                    {"a", original_value}, {"b", original_reference}},
+                original_value)))
+        == make_calculation_request_with_let(make_let_calc_request(
+            std::map<string, calculation_request>{
+                {"a", converted_value}, {"b", converted_reference}},
+            converted_value)));
+
+    // variables
+    REQUIRE(
+        as_generic_calc(make_thinknode_calc_request_with_variable("a"))
+        == make_calculation_request_with_variable("a"));
+
+    // meta
+    auto array_schema = make_thinknode_type_info_with_array_type(
+        make_thinknode_array_info(item_schema, none));
+    REQUIRE(
+        as_generic_calc(make_thinknode_calc_request_with_meta(
+            make_thinknode_meta_calc(original_array, array_schema)))
+        == make_calculation_request_with_meta(
+            make_meta_calc_request(converted_array, array_schema)));
+}

@@ -1,8 +1,8 @@
-#include <cradle/utilities/encoded_progress.h>
+#include <cradle/typing/utilities/encoded_progress.h>
 
 #include <sstream>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

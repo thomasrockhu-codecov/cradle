@@ -1,7 +1,7 @@
 #ifndef CRADLE_WEBSOCKET_CLIENT_H
 #define CRADLE_WEBSOCKET_CLIENT_H
 
-#include <cradle/core.h>
+#include <cradle/typing/core.h>
 
 namespace cradle {
 

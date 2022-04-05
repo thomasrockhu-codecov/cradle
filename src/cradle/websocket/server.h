@@ -1,8 +1,8 @@
 #ifndef CRADLE_WEBSOCKET_SERVER_H
 #define CRADLE_WEBSOCKET_SERVER_H
 
-#include <cradle/config.hpp>
-#include <cradle/core.h>
+#include <cradle/typing/core.h>
+#include <cradle/websocket/config.hpp>
 
 namespace cradle {
 

@@ -15,18 +15,18 @@
 
 #include <cppcoro/when_all.hpp>
 
-#include <cradle/core/dynamic.h>
-#include <cradle/encodings/msgpack.h>
-#include <cradle/encodings/sha256_hash_id.h>
-#include <cradle/fs/file_io.h>
-#include <cradle/service/core.h>
+#include <cradle/inner/fs/file_io.h>
+#include <cradle/inner/utilities/errors.h>
+#include <cradle/inner/utilities/functional.h>
 #include <cradle/thinknode/calc.h>
 #include <cradle/thinknode/iss.h>
 #include <cradle/thinknode/supervisor.h>
 #include <cradle/thinknode/utilities.h>
-#include <cradle/utilities/errors.h>
-#include <cradle/utilities/functional.h>
-#include <cradle/utilities/logging.h>
+#include <cradle/typing/core/dynamic.h>
+#include <cradle/typing/encodings/msgpack.h>
+#include <cradle/typing/encodings/sha256_hash_id.h>
+#include <cradle/typing/service/core.h>
+#include <cradle/typing/utilities/logging.h>
 #include <cradle/websocket/local_calcs.h>
 #include <cradle/websocket/server_api.h>
 
@@ -68,22 +68,24 @@ perform_lambda_calc(
         make_id(natively_encoded_sha256(args)));
 
     auto await_guard = tasklet_await(ctx.tasklet, function_name, cache_key);
-    co_return co_await cached<dynamic>(ctx.service, cache_key, [&] {
-        return uncached::perform_lambda_calc(ctx, function, std::move(args));
-    });
+    co_return co_await cached<dynamic>(
+        ctx.service, cache_key, [&](id_interface const&) {
+            return uncached::perform_lambda_calc(
+                ctx, function, std::move(args));
+        });
 }
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
     thinknode_request_context ctx,
-    string const& context_id,
+    string context_id,
     std::map<string, calculation_request> const& environment,
     calculation_request request);
 
 cppcoro::task<dynamic>
 resolve_calc_to_value(
     thinknode_request_context ctx,
-    string const& context_id,
+    string context_id,
     std::map<string, calculation_request> const& environment,
     calculation_request request)
 {
@@ -224,7 +226,7 @@ resolve_calc_to_value(
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
     thinknode_request_context ctx,
-    string const& context_id,
+    string context_id,
     std::map<string, calculation_request> const& environment,
     calculation_request request)
 {
@@ -368,7 +370,7 @@ resolve_calc_to_iss_object(
 cppcoro::task<dynamic>
 resolve_calc_to_value(
     thinknode_request_context ctx,
-    string const& context_id,
+    string context_id,
     calculation_request request)
 {
     co_return co_await resolve_calc_to_value(
@@ -378,7 +380,7 @@ resolve_calc_to_value(
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
     thinknode_request_context ctx,
-    string const& context_id,
+    string context_id,
     calculation_request request)
 {
     co_return co_await resolve_calc_to_iss_object(
