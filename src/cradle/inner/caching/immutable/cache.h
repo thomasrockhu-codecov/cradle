@@ -83,23 +83,10 @@ struct immutable_cache_entry_snapshot
 
     // size of the cached data - valid iff data is ready, 0 otherwise
     size_t size;
+
+    auto
+    operator<=>(immutable_cache_entry_snapshot const& other) const = default;
 };
-
-inline bool
-operator==(
-    immutable_cache_entry_snapshot const& a,
-    immutable_cache_entry_snapshot const& b)
-{
-    return a.key == b.key && a.state == b.state && a.size == b.size;
-}
-
-inline bool
-operator!=(
-    immutable_cache_entry_snapshot const& a,
-    immutable_cache_entry_snapshot const& b)
-{
-    return !(a == b);
-}
 
 struct immutable_cache_snapshot
 {
@@ -109,21 +96,10 @@ struct immutable_cache_snapshot
     // cache entries that are no longer in use and will be evicted when
     // necessary
     std::vector<immutable_cache_entry_snapshot> pending_eviction;
+
+    auto
+    operator<=>(immutable_cache_snapshot const& other) const = default;
 };
-
-inline bool
-operator==(
-    immutable_cache_snapshot const& a, immutable_cache_snapshot const& b)
-{
-    return a.in_use == b.in_use && a.pending_eviction == b.pending_eviction;
-}
-
-inline bool
-operator!=(
-    immutable_cache_snapshot const& a, immutable_cache_snapshot const& b)
-{
-    return !(a == b);
-}
 
 // Get a snapshot of the contents of an immutable memory cache.
 immutable_cache_snapshot
