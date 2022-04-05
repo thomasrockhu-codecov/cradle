@@ -1,7 +1,7 @@
 #include <cradle/thinknode/utilities.h>
 
-#include <cradle/utilities/errors.h>
-#include <cradle/utilities/functional.h>
+#include <cradle/inner/utilities/errors.h>
+#include <cradle/inner/utilities/functional.h>
 
 namespace cradle {
 
@@ -103,6 +103,19 @@ get_thinknode_service_id(string const& thinknode_id)
             CRADLE_THROW(
                 internal_check_failed() << internal_error_message_info(
                     "unrecognized Thinknode service ID"));
+    }
+}
+
+void
+log_info(thinknode_request_context& ctx, const char* msg)
+{
+    if (ctx.tasklet)
+    {
+        ctx.tasklet->log(msg);
+    }
+    else
+    {
+        spdlog::get("cradle")->info(msg);
     }
 }
 

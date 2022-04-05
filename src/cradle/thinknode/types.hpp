@@ -1,7 +1,7 @@
 #ifndef CRADLE_THINKNODE_TYPES_HPP
 #define CRADLE_THINKNODE_TYPES_HPP
 
-#include <cradle/core.h>
+#include <cradle/typing/core.h>
 
 namespace cradle {
 
@@ -22,6 +22,16 @@ struct thinknode_session
 {
     std::string api_url;
     std::string access_token;
+};
+
+struct service_core;
+class tasklet_tracker;
+
+struct thinknode_request_context
+{
+    service_core& service;
+    thinknode_session session;
+    tasklet_tracker* tasklet;
 };
 
 struct thinknode_array_info;

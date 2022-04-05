@@ -4,9 +4,9 @@
 #include <boost/function.hpp>
 #include <boost/shared_array.hpp>
 
-#include <cradle/core.h>
 #include <cradle/thinknode/messages.h>
 #include <cradle/thinknode/types.hpp>
+#include <cradle/typing/core.h>
 
 namespace cradle {
 

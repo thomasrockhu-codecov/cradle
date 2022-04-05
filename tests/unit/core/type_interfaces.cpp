@@ -1,9 +1,14 @@
-#include <cradle/core/type_interfaces.h>
+// Some of this testing is already done in inner/core/type_interfaces.cpp.
+// Differences:
+// - test_regular_value(_pair) test conversions from/to dynamic, which their
+//   inner parts do not.
+// - More types here.
+#include <cradle/typing/core/type_interfaces.h>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
-#include <cradle/caching/disk_cache.hpp>
-#include <cradle/utilities/text.h>
+#include <cradle/inner/utilities/text.h>
+#include <cradle/typing/service/types.hpp>
 
 using namespace cradle;
 
@@ -163,7 +168,7 @@ TEST_CASE("generated type interfaces", "[core][types]")
     {
         INFO("Test a generated structure type.");
         test_regular_value_pair(
-            disk_cache_config(some(string("abc")), 12),
-            disk_cache_config(some(string("def")), 1));
+            service_disk_cache_config(some(string("abc")), 12),
+            service_disk_cache_config(some(string("def")), 1));
     }
 }

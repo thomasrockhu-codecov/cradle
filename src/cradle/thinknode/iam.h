@@ -1,22 +1,20 @@
 #ifndef CRADLE_THINKNODE_IAM_H
 #define CRADLE_THINKNODE_IAM_H
 
-#include <cradle/service/core.h>
 #include <cradle/thinknode/types.hpp>
+#include <cradle/typing/service/core.h>
 
 namespace cradle {
 
 cppcoro::task<string>
-get_context_id(service_core& service, thinknode_session session, string realm);
+get_context_id(thinknode_request_context ctx, string realm);
 
 // Query the contents of a context.
 cppcoro::shared_task<thinknode_context_contents>
-get_context_contents(
-    service_core& service, thinknode_session session, string context_id);
+get_context_contents(thinknode_request_context ctx, string context_id);
 
 cppcoro::shared_task<string>
-get_context_bucket(
-    service_core& service, thinknode_session session, string context_id);
+get_context_bucket(thinknode_request_context ctx, string context_id);
 
 } // namespace cradle
 

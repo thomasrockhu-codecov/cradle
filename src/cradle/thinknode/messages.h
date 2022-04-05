@@ -4,15 +4,15 @@
 // This file implements the general pattern used within Astroid to transmit
 // messages over TCP.
 
-#include <cradle/io/asio.h>
+#include <cradle/typing/io/asio.h>
 
 #include <cstring>
 #include <queue>
 
 #include <boost/static_assert.hpp>
 
-#include <cradle/io/endian.h>
-#include <cradle/io/raw_memory_io.h>
+#include <cradle/typing/io/endian.h>
+#include <cradle/typing/io/raw_memory_io.h>
 
 namespace cradle {
 

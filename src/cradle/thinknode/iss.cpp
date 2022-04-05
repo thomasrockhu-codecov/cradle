@@ -2,14 +2,14 @@
 
 #include <boost/tokenizer.hpp>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/encodings/msgpack.h>
-#include <cradle/encodings/sha256_hash_id.h>
-#include <cradle/io/http_requests.hpp>
+#include <cradle/inner/utilities/text.h>
 #include <cradle/thinknode/calc.h>
 #include <cradle/thinknode/utilities.h>
-#include <cradle/utilities/logging.h>
-#include <cradle/utilities/text.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/encodings/msgpack.h>
+#include <cradle/typing/encodings/sha256_hash_id.h>
+#include <cradle/typing/io/http_requests.hpp>
+#include <cradle/typing/utilities/logging.h>
 
 namespace cradle {
 
@@ -17,20 +17,19 @@ namespace uncached {
 
 cppcoro::task<string>
 resolve_iss_object_to_immutable(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context ctx,
     string context_id,
     string object_id,
     bool ignore_upgrades)
 {
     auto query = make_get_request(
-        session.api_url + "/iss/" + object_id
+        ctx.session.api_url + "/iss/" + object_id
             + "/immutable?context=" + context_id
             + "&ignore_upgrades=" + (ignore_upgrades ? "true" : "false"),
-        {{"Authorization", "Bearer " + session.access_token},
+        {{"Authorization", "Bearer " + ctx.session.access_token},
          {"Accept", "application/json"}});
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(ctx, query);
     switch (response.status_code)
     {
         case 200: {
@@ -42,14 +41,10 @@ resolve_iss_object_to_immutable(
             // calculation that hasn't finished yet, so wait for it to resolve
             // and try again.
             auto progression = long_poll_calculation_status(
-                service,
-                session,
-                context_id,
-                response.headers["Thinknode-Reference-Id"]);
+                ctx, context_id, response.headers["Thinknode-Reference-Id"]);
             co_await for_async(std::move(progression), [](auto status) {});
             co_return co_await uncached::resolve_iss_object_to_immutable(
-                service,
-                std::move(session),
+                ctx,
                 std::move(context_id),
                 std::move(object_id),
                 ignore_upgrades);
@@ -72,40 +67,42 @@ resolve_iss_object_to_immutable(
 
 cppcoro::shared_task<string>
 resolve_iss_object_to_immutable(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context ctx,
     string context_id,
     string object_id,
     bool ignore_upgrades)
 {
-    auto cache_key = make_sha256_hashed_id(
-        "resolve_iss_object_to_immutable",
-        session.api_url,
+    string function_name{"resolve_iss_object_to_immutable"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name,
+        ctx.session.api_url,
         ignore_upgrades ? "n/a" : context_id,
         object_id);
-
-    return fully_cached<string>(service, cache_key, [=, &service] {
+    auto create_task = [=]() {
         return uncached::resolve_iss_object_to_immutable(
-            service, session, context_id, object_id, ignore_upgrades);
-    });
+            ctx, context_id, object_id, ignore_upgrades);
+    };
+    return make_shared_task_for_cacheable<string>(
+        ctx.service,
+        std::move(cache_key),
+        create_task,
+        ctx.tasklet,
+        std::move(function_name));
 }
 
 namespace uncached {
 
 cppcoro::task<std::map<string, string>>
 get_iss_object_metadata(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string object_id)
+    thinknode_request_context ctx, string context_id, string object_id)
 {
     auto query = make_http_request(
         http_request_method::HEAD,
-        session.api_url + "/iss/" + object_id + "?context=" + context_id,
-        {{"Authorization", "Bearer " + session.access_token}},
+        ctx.session.api_url + "/iss/" + object_id + "?context=" + context_id,
+        {{"Authorization", "Bearer " + ctx.session.access_token}},
         blob());
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(ctx, query);
     switch (response.status_code)
     {
         case 200: {
@@ -116,16 +113,10 @@ get_iss_object_metadata(
             // calculation that hasn't finished yet, so wait for it to resolve
             // and try again.
             auto progression = long_poll_calculation_status(
-                service,
-                session,
-                context_id,
-                response.headers["Thinknode-Reference-Id"]);
+                ctx, context_id, response.headers["Thinknode-Reference-Id"]);
             co_await for_async(std::move(progression), [](auto status) {});
             co_return co_await uncached::get_iss_object_metadata(
-                service,
-                std::move(session),
-                std::move(context_id),
-                std::move(object_id));
+                ctx, std::move(context_id), std::move(object_id));
         }
         case 204: {
             // The ISS object we're interested in is the result of a
@@ -144,38 +135,36 @@ get_iss_object_metadata(
 
 cppcoro::shared_task<std::map<string, string>>
 get_iss_object_metadata(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string object_id)
+    thinknode_request_context ctx, string context_id, string object_id)
 {
     CRADLE_LOG_CALL(<< CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(object_id))
 
-    auto cache_key = make_sha256_hashed_id(
-        "get_iss_object_metadata", session.api_url, context_id, object_id);
-
-    return fully_cached<std::map<string, string>>(
-        service, cache_key, [=, &service] {
-            return uncached::get_iss_object_metadata(
-                service, session, context_id, object_id);
-        });
+    string function_name{"get_iss_object_metadata"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, ctx.session.api_url, context_id, object_id);
+    auto create_task = [=]() {
+        return uncached::get_iss_object_metadata(ctx, context_id, object_id);
+    };
+    return make_shared_task_for_cacheable<std::map<string, string>>(
+        ctx.service,
+        std::move(cache_key),
+        create_task,
+        ctx.tasklet,
+        std::move(function_name));
 }
 
 namespace uncached {
 
 cppcoro::task<dynamic>
 retrieve_immutable(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string immutable_id)
+    thinknode_request_context ctx, string context_id, string immutable_id)
 {
     auto query = make_get_request(
-        session.api_url + "/iss/immutable/" + immutable_id
+        ctx.session.api_url + "/iss/immutable/" + immutable_id
             + "?context=" + context_id,
-        {{"Authorization", "Bearer " + session.access_token},
+        {{"Authorization", "Bearer " + ctx.session.access_token},
          {"Accept", "application/octet-stream"}});
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(ctx, query);
     co_return parse_msgpack_response(response);
 }
 
@@ -183,38 +172,37 @@ retrieve_immutable(
 
 cppcoro::shared_task<dynamic>
 retrieve_immutable(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string immutable_id)
+    thinknode_request_context ctx, string context_id, string immutable_id)
 {
     // CRADLE_LOG_CALL(
     //     << CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(immutable_id));
 
-    auto cache_key = make_sha256_hashed_id(
-        "retrieve_immutable", session.api_url, immutable_id);
-
-    return fully_cached<dynamic>(service, cache_key, [=, &service] {
-        return uncached::retrieve_immutable(
-            service, session, context_id, immutable_id);
-    });
+    string function_name{"retrieve_immutable"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, ctx.session.api_url, immutable_id);
+    auto create_task = [=]() {
+        return uncached::retrieve_immutable(ctx, context_id, immutable_id);
+    };
+    return make_shared_task_for_cacheable<dynamic>(
+        ctx.service,
+        std::move(cache_key),
+        create_task,
+        ctx.tasklet,
+        std::move(function_name));
 }
 
 namespace uncached {
 
 cppcoro::task<blob>
 retrieve_immutable_blob(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string immutable_id)
+    thinknode_request_context ctx, string context_id, string immutable_id)
 {
     auto query = make_get_request(
-        session.api_url + "/iss/immutable/" + immutable_id
+        ctx.session.api_url + "/iss/immutable/" + immutable_id
             + "?context=" + context_id,
-        {{"Authorization", "Bearer " + session.access_token},
+        {{"Authorization", "Bearer " + ctx.session.access_token},
          {"Accept", "application/octet-stream"}});
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(ctx, query);
     co_return response.body;
 }
 
@@ -222,21 +210,24 @@ retrieve_immutable_blob(
 
 cppcoro::shared_task<blob>
 retrieve_immutable_blob(
-    service_core& service,
-    thinknode_session session,
-    string context_id,
-    string immutable_id)
+    thinknode_request_context ctx, string context_id, string immutable_id)
 {
     // CRADLE_LOG_CALL(
     //     << CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(immutable_id));
 
-    auto cache_key = make_sha256_hashed_id(
-        "retrieve_immutable_blob", session.api_url, immutable_id);
-
-    return fully_cached<blob>(service, cache_key, [=, &service] {
+    string function_name{"retrieve_immutable_blob"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, ctx.session.api_url, immutable_id);
+    auto create_task = [=]() {
         return uncached::retrieve_immutable_blob(
-            service, session, context_id, immutable_id);
-    });
+            ctx, context_id, immutable_id);
+    };
+    return make_shared_task_for_cacheable<blob>(
+        ctx.service,
+        std::move(cache_key),
+        create_task,
+        ctx.tasklet,
+        std::move(function_name));
 }
 
 string
@@ -476,22 +467,22 @@ namespace uncached {
 
 cppcoro::task<string>
 post_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context ctx,
     string context_id,
     thinknode_type_info schema,
     blob object_data)
 {
     auto query = make_http_request(
         http_request_method::POST,
-        session.api_url + "/iss/" + get_url_type_string(session, schema)
+        ctx.session.api_url + "/iss/"
+            + get_url_type_string(ctx.session, schema)
             + "?context=" + context_id,
-        {{"Authorization", "Bearer " + session.access_token},
+        {{"Authorization", "Bearer " + ctx.session.access_token},
          {"Accept", "application/json"},
          {"Content-Type", "application/octet-stream"}},
         object_data);
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(ctx, std::move(query));
 
     co_return from_dynamic<id_response>(parse_json_response(response)).id;
 }
@@ -500,41 +491,43 @@ post_iss_object(
 
 cppcoro::shared_task<string>
 post_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context ctx,
     string context_id,
     thinknode_type_info schema,
     blob object_data)
 {
+    string function_name{"post_iss_object"};
     std::string data_hash;
     uint8_t const* data = reinterpret_cast<uint8_t const*>(object_data.data());
     picosha2::hash256_hex_string(data, data + object_data.size(), data_hash);
 
-    auto cache_key = make_sha256_hashed_id(
-        "post_iss_object",
-        session.api_url,
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name,
+        ctx.session.api_url,
         context_id,
-        get_url_type_string(session, schema),
+        get_url_type_string(ctx.session, schema),
         data_hash);
-
-    return fully_cached<string>(service, cache_key, [=, &service] {
-        return uncached::post_iss_object(
-            service, session, context_id, schema, object_data);
-    });
+    auto create_task = [=]() {
+        return uncached::post_iss_object(ctx, context_id, schema, object_data);
+    };
+    return make_shared_task_for_cacheable<string>(
+        ctx.service,
+        std::move(cache_key),
+        create_task,
+        ctx.tasklet,
+        std::move(function_name));
 }
 
 cppcoro::shared_task<string>
 post_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context ctx,
     string context_id,
     thinknode_type_info schema,
     dynamic data)
 {
     blob msgpack_data = value_to_msgpack_blob(data);
     return post_iss_object(
-        service,
-        std::move(session),
+        ctx,
         std::move(context_id),
         std::move(schema),
         std::move(msgpack_data));
@@ -542,20 +535,19 @@ post_iss_object(
 
 cppcoro::task<nil_t>
 shallowly_copy_iss_object(
-    service_core& service,
-    thinknode_session session,
+    thinknode_request_context ctx,
     string source_bucket,
     string destination_context_id,
     string object_id)
 {
     auto query = make_http_request(
         http_request_method::POST,
-        session.api_url + "/iss/" + object_id + "/buckets/" + source_bucket
+        ctx.session.api_url + "/iss/" + object_id + "/buckets/" + source_bucket
             + "?context=" + destination_context_id,
-        {{"Authorization", "Bearer " + session.access_token}},
+        {{"Authorization", "Bearer " + ctx.session.access_token}},
         blob());
 
-    co_await async_http_request(service, query);
+    co_await async_http_request(ctx, query);
 
     co_return nil;
 }

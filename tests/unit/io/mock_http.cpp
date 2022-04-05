@@ -1,6 +1,6 @@
-#include <cradle/io/mock_http.h>
+#include <cradle/typing/io/mock_http.h>
 
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 

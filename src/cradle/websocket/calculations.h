@@ -1,7 +1,8 @@
 #ifndef CRADLE_WEBSOCKET_CALCULATIONS_H
 #define CRADLE_WEBSOCKET_CALCULATIONS_H
 
-#include <cradle/service/core.h>
+#include <cradle/inner/introspection/tasklet.h>
+#include <cradle/typing/service/core.h>
 #include <cradle/websocket/types.hpp>
 
 namespace cradle {
@@ -43,16 +44,14 @@ make_function(Function&& function)
 
 cppcoro::task<dynamic>
 resolve_calc_to_value(
-    service_core& service,
-    thinknode_session const& session,
-    string const& context_id,
+    thinknode_request_context ctx,
+    string context_id,
     calculation_request request);
 
 cppcoro::task<std::string>
 resolve_calc_to_iss_object(
-    service_core& service,
-    thinknode_session const& session,
-    string const& context_id,
+    thinknode_request_context ctx,
+    string context_id,
     calculation_request request);
 
 calculation_request

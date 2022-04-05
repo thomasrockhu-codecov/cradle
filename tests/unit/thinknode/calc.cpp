@@ -8,10 +8,10 @@
 
 #include <fakeit.h>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/encodings/json.h>
-#include <cradle/io/mock_http.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/encodings/json.h>
+#include <cradle/typing/io/mock_http.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 using namespace fakeit;
@@ -93,8 +93,9 @@ TEST_CASE("calc status query", "[thinknode][tn_calc]")
     session.api_url = "https://mgh.thinknode.io/api/v1.0";
     session.access_token = "xyz";
 
-    auto status = cppcoro::sync_wait(
-        query_calculation_status(service, session, "123", "abc"));
+    thinknode_request_context trc{service, session, nullptr};
+    auto status
+        = cppcoro::sync_wait(query_calculation_status(trc, "123", "abc"));
     REQUIRE(status == make_calculation_status_with_completed(nil));
 
     REQUIRE(mock_http.is_complete());
@@ -118,8 +119,10 @@ TEST_CASE("calc request retrieval", "[thinknode][tn_calc]")
     session.api_url = "https://mgh.thinknode.io/api/v1.0";
     session.access_token = "xyz";
 
-    auto request = cppcoro::sync_wait(
-        retrieve_calculation_request(service, session, "123", "abc"));
+    thinknode_request_context trc{service, session, nullptr};
+    auto request
+        = cppcoro::sync_wait(retrieve_calculation_request(trc, "123", "abc"));
+
     REQUIRE(
         request
         == make_thinknode_calc_request_with_value(dynamic({2.1, 4.2})));
@@ -169,9 +172,9 @@ TEST_CASE("calc status long polling", "[thinknode][tn_calc]")
     session.api_url = "https://mgh.thinknode.io/api/v1.0";
     session.access_token = "xyz";
 
+    thinknode_request_context trc{service, session, nullptr};
     cppcoro::sync_wait([&]() -> cppcoro::task<> {
-        auto statuses
-            = long_poll_calculation_status(service, session, "123", "abc");
+        auto statuses = long_poll_calculation_status(trc, "123", "abc");
         size_t status_counter = 0;
         co_await for_async(std::move(statuses), [&](auto status) {
             REQUIRE(status == expected_statuses.at(status_counter));

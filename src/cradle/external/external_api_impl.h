@@ -1,9 +1,9 @@
 #ifndef CRADLE_EXTERNAL_API_IMPL_H
 #define CRADLE_EXTERNAL_API_IMPL_H
 
-#include <cradle/core/exception.h>
 #include <cradle/external_api.h>
-#include <cradle/service/core.h>
+#include <cradle/inner/core/exception.h>
+#include <cradle/typing/service/core.h>
 
 namespace cradle {
 
@@ -44,7 +44,7 @@ class api_session_impl
         return service_.get_service_core();
     }
 
-    cradle::thinknode_session&
+    cradle::thinknode_session
     get_thinknode_session()
     {
         return thinknode_session_;

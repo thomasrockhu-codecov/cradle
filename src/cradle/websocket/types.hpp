@@ -2,9 +2,11 @@
 #define CRADLE_WEBSOCKET_TYPES_HPP
 
 #include <cradle/thinknode/types.hpp>
+#include <cradle/websocket/sample_lambdas.h>
 
 namespace cradle {
 
+class tasklet_tracker;
 struct lambda_calculation;
 struct function_application;
 struct array_calc_request;
@@ -55,7 +57,8 @@ struct function_application
 struct lambda_function
 {
     captured_id id;
-    std::function<dynamic(dynamic_array const& args)> object;
+    std::function<dynamic(dynamic_array const& args, tasklet_tracker* tasklet)>
+        object;
 };
 inline bool
 operator<(lambda_function const& a, lambda_function const& b)
@@ -75,7 +78,7 @@ to_dynamic(dynamic* v, lambda_function const& x)
 inline void
 from_dynamic(lambda_function* x, dynamic const& v)
 {
-    throw "unimplemented";
+    find_sample_lambda(x, v);
 }
 inline size_t
 deep_sizeof(lambda_function const& x)

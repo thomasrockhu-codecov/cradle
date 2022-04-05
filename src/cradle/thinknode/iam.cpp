@@ -1,23 +1,23 @@
 #include <cradle/thinknode/iam.h>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/encodings/sha256_hash_id.h>
-#include <cradle/io/http_requests.hpp>
+#include <cradle/thinknode/utilities.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/encodings/sha256_hash_id.h>
+#include <cradle/typing/io/http_requests.hpp>
 
 namespace cradle {
 
 namespace uncached {
 
 cppcoro::task<thinknode_context_contents>
-get_context_contents(
-    service_core& service, thinknode_session session, string context_id)
+get_context_contents(thinknode_request_context ctx, string context_id)
 {
     auto query = make_get_request(
-        session.api_url + "/iam/contexts/" + context_id,
-        {{"Authorization", "Bearer " + session.access_token},
+        ctx.session.api_url + "/iam/contexts/" + context_id,
+        {{"Authorization", "Bearer " + ctx.session.access_token},
          {"Accept", "application/json"}});
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(ctx, query);
 
     co_return from_dynamic<thinknode_context_contents>(
         parse_json_response(response));
@@ -26,38 +26,38 @@ get_context_contents(
 } // namespace uncached
 
 cppcoro::task<string>
-get_context_id(service_core& service, thinknode_session session, string realm)
+get_context_id(thinknode_request_context ctx, string realm)
 {
     auto query = make_get_request(
-        session.api_url + "/iam/realms/" + realm + "/context",
-        {{"Authorization", "Bearer " + session.access_token},
+        ctx.session.api_url + "/iam/realms/" + realm + "/context",
+        {{"Authorization", "Bearer " + ctx.session.access_token},
          {"Accept", "application/json"}});
 
-    auto response = co_await async_http_request(service, query);
+    auto response = co_await async_http_request(ctx, query);
 
     co_return from_dynamic<id_response>(parse_json_response(response)).id;
 }
 
 cppcoro::shared_task<thinknode_context_contents>
-get_context_contents(
-    service_core& service, thinknode_session session, string context_id)
+get_context_contents(thinknode_request_context ctx, string context_id)
 {
-    auto cache_key = make_sha256_hashed_id(
-        "get_context_contents", session.api_url, context_id);
-
-    return fully_cached<thinknode_context_contents>(
-        service, cache_key, [=, &service] {
-            return uncached::get_context_contents(
-                service, session, context_id);
-        });
+    string function_name{"get_context_contents"};
+    auto cache_key = make_captured_sha256_hashed_id(
+        function_name, ctx.session.api_url, context_id);
+    auto create_task
+        = [=]() { return uncached::get_context_contents(ctx, context_id); };
+    return make_shared_task_for_cacheable<thinknode_context_contents>(
+        ctx.service,
+        std::move(cache_key),
+        create_task,
+        ctx.tasklet,
+        std::move(function_name));
 }
 
 cppcoro::shared_task<string>
-get_context_bucket(
-    service_core& service, thinknode_session session, string context_id)
+get_context_bucket(thinknode_request_context ctx, string context_id)
 {
-    auto context = co_await get_context_contents(
-        service, session, std::move(context_id));
+    auto context = co_await get_context_contents(ctx, std::move(context_id));
     co_return context.bucket;
 }
 

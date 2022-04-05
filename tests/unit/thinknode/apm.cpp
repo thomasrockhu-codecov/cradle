@@ -2,10 +2,10 @@
 
 #include <cppcoro/sync_wait.hpp>
 
-#include <cradle/core/monitoring.h>
-#include <cradle/io/mock_http.h>
-#include <cradle/service/core.h>
-#include <cradle/utilities/testing.h>
+#include <cradle/typing/core/monitoring.h>
+#include <cradle/typing/io/mock_http.h>
+#include <cradle/typing/service/core.h>
+#include <cradle/typing/utilities/testing.h>
 
 using namespace cradle;
 
@@ -139,8 +139,9 @@ TEST_CASE("app version info", "[thinknode][apm]")
             date(2017, boost::gregorian::Apr, 26),
             boost::posix_time::time_duration(1, 2, 3)));
 
+    thinknode_request_context trc{service, session, nullptr};
     auto version_info = cppcoro::sync_wait(
-        get_app_version_info(service, session, "acme", "pets", "2.0.0"));
+        get_app_version_info(trc, "acme", "pets", "2.0.0"));
     REQUIRE(version_info == expected_version_info);
 
     REQUIRE(mock_http.is_complete());
