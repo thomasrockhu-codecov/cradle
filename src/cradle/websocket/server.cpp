@@ -1005,9 +1005,8 @@ compute_iss_tree_diff(
     string object_id_b)
 {
     CRADLE_LOG_CALL(
-        << CRADLE_LOG_ARG(ctx.session) << CRADLE_LOG_ARG(context_id_a)
-        << CRADLE_LOG_ARG(object_id_a) << CRADLE_LOG_ARG(context_id_b)
-        << CRADLE_LOG_ARG(object_id_b))
+        << CRADLE_LOG_ARG(context_id_a) << CRADLE_LOG_ARG(object_id_a)
+        << CRADLE_LOG_ARG(context_id_b) << CRADLE_LOG_ARG(object_id_b))
 
     auto [object_a, object_b] = co_await cppcoro::when_all(
         get_iss_object(ctx, context_id_a, object_id_a),
@@ -1062,9 +1061,7 @@ resolve_meta_chain(
     string context_id,
     calculation_request request)
 {
-    CRADLE_LOG_CALL(
-        << CRADLE_LOG_ARG(ctx.session) << CRADLE_LOG_ARG(context_id)
-        << CRADLE_LOG_ARG(request))
+    CRADLE_LOG_CALL(<< CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(request))
 
     while (is_meta(request))
     {
@@ -1083,9 +1080,7 @@ locally_resolve_meta_chain(
     string context_id,
     calculation_request request)
 {
-    CRADLE_LOG_CALL(
-        << CRADLE_LOG_ARG(ctx.session) << CRADLE_LOG_ARG(context_id)
-        << CRADLE_LOG_ARG(request))
+    CRADLE_LOG_CALL(<< CRADLE_LOG_ARG(context_id) << CRADLE_LOG_ARG(request))
 
     while (is_meta(request))
     {
