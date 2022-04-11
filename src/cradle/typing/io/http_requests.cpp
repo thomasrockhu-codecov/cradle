@@ -84,6 +84,11 @@ reset_curl_connection(http_connection_impl& connection)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2);
     curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+
+    // https://curl.se/libcurl/c/threadsafe.html says:
+    // When using multiple threads you should set the CURLOPT_NOSIGNAL option
+    // to 1L for all handles.
+    curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 }
 
 http_connection::http_connection(http_request_system& system)
