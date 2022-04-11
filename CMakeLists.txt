@@ -162,12 +162,10 @@ endmacro()
 
 # Enable a high level of compiler warnings and treat them as errors.
 if(IS_GCC OR IS_CLANG)
-    add_compile_options(-Wall -Werror)
+    add_compile_options(-Wall -Werror -Wextra -pedantic)
     # Disable warnings that are too strict.
     # unused function parameters
     add_compile_options(-Wno-unused-parameter)
-    # unused functions
-    add_compile_options(-Wno-unused-function)
 elseif(IS_MSVC)
     # First strip out the old warning level.
     string(REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})

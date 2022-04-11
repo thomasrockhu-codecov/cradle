@@ -137,4 +137,4 @@ private:
   std::vector<std::string> _split(const std::string &hash,
                                   const std::string &splitters) const;
 };
-};
+} // namespace hashidsxx
