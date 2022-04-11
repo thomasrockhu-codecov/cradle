@@ -16,10 +16,10 @@ make_thinknode_request_context(api_session& session, char const* title)
 {
     static string const pool_name("ext");
     auto tasklet{create_tasklet_tracker(pool_name, title)};
-    return thinknode_request_context(
+    return thinknode_request_context{
         session.impl().get_service_core(),
         session.impl().get_thinknode_session(),
-        tasklet);
+        tasklet};
 }
 
 api_service::api_service(api_service_config const& config)
@@ -172,7 +172,7 @@ post_iss_object(
     return cradle::post_iss_object(
         std::move(ctx),
         std::move(context_id),
-        std::move(cradle::parse_url_type_string(schema)),
+        cradle::parse_url_type_string(schema),
         object_data);
 }
 

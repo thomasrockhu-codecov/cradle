@@ -47,11 +47,11 @@ TEST_CASE("basic immutable cache usage", "[immutable_cache]")
     {
         INFO("Cache reset() and is_initialized() work as expected.");
         REQUIRE(!cache.is_initialized());
-        cache.reset(immutable_cache_config(1024));
+        cache.reset(immutable_cache_config{1024});
         REQUIRE(cache.is_initialized());
         cache.reset();
         REQUIRE(!cache.is_initialized());
-        cache.reset(immutable_cache_config(1024));
+        cache.reset(immutable_cache_config{1024});
         REQUIRE(cache.is_initialized());
     }
 
@@ -252,7 +252,7 @@ TEST_CASE("basic immutable cache usage", "[immutable_cache]")
 TEST_CASE("immutable cache LRU eviction", "[immutable_cache]")
 {
     // Initialize the cache with 1.5kB of space for unused data.
-    immutable_cache cache(immutable_cache_config(1536));
+    immutable_cache cache(immutable_cache_config{1536});
 
     auto one_kb_string_task = [](char content) -> cppcoro::task<std::string> {
         co_return std::string(1024, content);
