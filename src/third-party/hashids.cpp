@@ -289,4 +289,4 @@ Hashids::decode(const std::string& input) const
 
     return output;
 }
-}; // namespace hashidsxx
+} // namespace hashidsxx

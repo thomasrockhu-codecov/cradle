@@ -282,6 +282,8 @@ ref(id_interface const& id)
 // simple_id<Value> takes a regular type (Value) and implements id_interface
 // for it. The type Value must be copyable and comparable for equality and
 // ordering (i.e., supply == and < operators).
+// Clang doesn't like ordered function pointer comparisons but it seems safe in
+// this context.
 template<class Value>
 struct simple_id : id_interface
 {
@@ -316,7 +318,14 @@ struct simple_id : id_interface
     less_than(id_interface const& other) const override
     {
         simple_id const& other_id = static_cast<simple_id const&>(other);
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wordered-compare-function-pointers"
+#endif
         return value_ < other_id.value_;
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
     }
 
     void

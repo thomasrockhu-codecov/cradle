@@ -44,8 +44,12 @@ TEST_CASE("make_service_config all settings", "[external]")
 TEST_CASE("make_service_config - disk cache limit only", "[external]")
 {
     cradle::external::api_service_config api_config{
-        .disk_cache_size_limit = 400,
-    };
+        .memory_cache_unused_size_limit{},
+        .disk_cache_directory{},
+        .disk_cache_size_limit{400},
+        .request_concurrency{},
+        .compute_concurrency{},
+        .http_concurrency{}};
     auto impl_config = cradle::external::make_service_config(api_config);
 
     REQUIRE(impl_config.disk_cache);
@@ -56,8 +60,12 @@ TEST_CASE("make_service_config - disk cache limit only", "[external]")
 TEST_CASE("make_service_config - disk cache directory only", "[external]")
 {
     cradle::external::api_service_config api_config{
-        .disk_cache_directory = "/some/path",
-    };
+        .memory_cache_unused_size_limit{},
+        .disk_cache_directory{"/some/path"},
+        .disk_cache_size_limit{},
+        .request_concurrency{},
+        .compute_concurrency{},
+        .http_concurrency{}};
 
     REQUIRE_THROWS_WITH(
         cradle::external::make_service_config(api_config),

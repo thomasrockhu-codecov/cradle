@@ -50,7 +50,9 @@ service_core::reset(service_config const& svc_config)
     inner_reset(make_inner_service_config(svc_config));
     impl_.reset(new detail::service_core_internals{
         .http_pool = cppcoro::static_thread_pool(
-            svc_config.http_concurrency ? *svc_config.http_concurrency : 36)});
+            svc_config.http_concurrency ? *svc_config.http_concurrency : 36),
+        .local_compute_pool{},
+        .mock_http{}});
 }
 
 service_core::~service_core()

@@ -44,12 +44,6 @@ make_http_200_response(string body)
     return response;
 }
 
-static string
-get_method_name(http_request_method method)
-{
-    return boost::to_upper_copy(string(get_value_id(method)));
-};
-
 http_request_system::http_request_system()
 {
     if (curl_global_init(CURL_GLOBAL_ALL))

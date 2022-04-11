@@ -44,7 +44,7 @@ get_mime_base64_character_set()
         = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     set.padding = '=';
     return set;
-};
+}
 
 inline base64_character_set
 get_url_friendly_base64_character_set()
@@ -54,7 +54,7 @@ get_url_friendly_base64_character_set()
         = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
     set.padding = 0;
     return set;
-};
+}
 
 // Encode the given source data in base64 using the provided character set.
 // :dst must be able to hold at least get_base64_encoded_length(:src_size)

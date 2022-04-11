@@ -44,7 +44,7 @@ include(cmake/version.cmake)
 # Download/include CMake/Conan integration.
 if(NOT EXISTS "${CMAKE_CURRENT_BINARY_DIR}/conan.cmake")
     message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-    file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.16.1/conan.cmake"
+    file(DOWNLOAD "https://raw.githubusercontent.com/conan-io/cmake-conan/0.18.1/conan.cmake"
                   "${CMAKE_CURRENT_BINARY_DIR}/conan.cmake"
                   TLS_VERIFY ON)
 endif()
@@ -62,7 +62,7 @@ conan_cmake_configure(
         sqlite3/3.35.2
         fakeit/2.0.7
         websocketpp/0.8.2
-        zlib/1.2.11
+        zlib/1.2.12
         bzip2/1.0.8
         yaml-cpp/0.6.3
         spdlog/1.8.2
@@ -108,13 +108,15 @@ include(FetchContent)
 
 # The cppcoro detection logic seems broken for GCC 10.x (at least in CI), so
 # override it.
-if (IS_GCC)
+if(IS_GCC OR IS_CLANG)
     add_library(std::coroutines INTERFACE IMPORTED)
     set(CXX_COROUTINES_HAVE_COROUTINES TRUE CACHE BOOL "TRUE if we have the C++ coroutines feature" FORCE)
     set(CXX_COROUTINES_HEADER coroutine CACHE STRING "The header that should be included to obtain the coroutines APIs" FORCE)
     set(CXX_COROUTINES_NAMESPACE std CACHE STRING "The C++ namespace that contains the coroutines APIs" FORCE)
     set(Coroutines_FOUND TRUE CACHE BOOL "TRUE if we can compile and link a program using std::coroutines" FORCE)
+if(IS_GCC)
     add_compile_options(-fcoroutines)
+endif()
 endif()
 
 FetchContent_Declare(fetched_cppcoro
@@ -162,12 +164,10 @@ endmacro()
 
 # Enable a high level of compiler warnings and treat them as errors.
 if(IS_GCC OR IS_CLANG)
-    add_compile_options(-Wall -Werror)
+    add_compile_options(-Wall -Werror -Wextra -pedantic)
     # Disable warnings that are too strict.
     # unused function parameters
     add_compile_options(-Wno-unused-parameter)
-    # unused functions
-    add_compile_options(-Wno-unused-function)
 elseif(IS_MSVC)
     # First strip out the old warning level.
     string(REPLACE "/W3" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
