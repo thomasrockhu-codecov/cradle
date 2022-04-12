@@ -19,5 +19,5 @@ jobs:
     - name: Test
       run: |
         cd python
-        flake8 src tests
-        mypy src tests
+        flake8 scripts src tests
+        mypy scripts src tests
