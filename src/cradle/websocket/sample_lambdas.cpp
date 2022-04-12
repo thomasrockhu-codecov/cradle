@@ -21,9 +21,12 @@ sleeper(dynamic_array const& args, tasklet_tracker* tasklet)
 {
     double value;
     from_dynamic(&value, args[0]);
-    std::ostringstream os;
-    os << "Sleep for " << value << " seconds";
-    tasklet->log(os.str());
+    if (tasklet)
+    {
+        std::ostringstream os;
+        os << "Sleep for " << value << " seconds";
+        tasklet->log(os.str());
+    }
     std::chrono::duration<double> duration{value};
     std::this_thread::sleep_for(duration);
 

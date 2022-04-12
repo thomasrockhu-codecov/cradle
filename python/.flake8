@@ -1,0 +1,6 @@
+[flake8]
+max-line-length = 120
+
+# E201 whitespace after '(' (used in tests/)
+# W503 line break before binary operator (which is best practice)
+ignore = E201,W503

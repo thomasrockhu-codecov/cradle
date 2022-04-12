@@ -43,8 +43,9 @@ jobs:
         cmake -Bbuild -DCMAKE_BUILD_TYPE=${{matrix.config}} .
 
     - name: Build & Test
-      run: >
+      run: |
         python python/generate_config.py $CRADLE_THINKNODE_API_TOKEN
-
-        cmake --build build --config ${{matrix.config}}
-        --target all_unit_tests -j4
+        cmake --build build --config ${{matrix.config}} --target all_unit_tests -j4
+        source .venv/bin/activate
+        pip3 install -e python
+        cmake --build build --config ${{matrix.config}} --target integration_tests

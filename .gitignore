@@ -5,6 +5,7 @@
 .lcov.info
 .venv
 *.pyc
+cradle.egg-info/
 python/config.yml
 .token
 coverage.txt
