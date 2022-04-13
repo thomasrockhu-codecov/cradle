@@ -2,9 +2,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
-
 #include <cradle/typing/utilities/testing.h>
 
 #include <cradle/inner/utilities/environment.h>
@@ -18,8 +15,6 @@
 using namespace cradle;
 
 static http_request_system the_http_request_system;
-
-static auto the_logger = spdlog::stdout_color_mt("cradle");
 
 http_response
 perform_simple_request(http_request const& request)

@@ -334,17 +334,17 @@ add_custom_command(TARGET server POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:server> ${deploy_dir})
 
 # Add the unit test runner.
+# Note that test/runner.cpp is shared with the other unit tests.
 file(GLOB_RECURSE test_srcs_unit CONFIGURE_DEPENDS "tests/unit/*.cpp")
-add_executable(unit_test_runner ${test_srcs_unit})
+add_executable(unit_test_runner tests/runner.cpp ${test_srcs_unit})
 target_include_directories(unit_test_runner PRIVATE
     ${generated_include_dir}/src
-    src
-    tests)
+    src)
 target_link_libraries(unit_test_runner cradle_outer cradle_inner)
 # Don't use precompiled headers for the test runner since it needs to include
 # Catch specially.
 set_source_files_properties(
-    tests/unit/runner.cpp
+    tests/runner.cpp
     PROPERTIES
         SKIP_PRECOMPILE_HEADERS ON)
 
@@ -380,46 +380,18 @@ add_custom_target(
     COMMAND ${CMAKE_COMMAND} -E chdir unit-testing ${CMAKE_COMMAND} -E env CRADLE_DEPLOY_DIR=${CMAKE_CURRENT_BINARY_DIR}/deploy CRADLE_THINKNODE_API_TOKEN=${API_TOKEN} CRADLE_THINKNODE_DOCKER_AUTH=${DOCKER_AUTH} $<TARGET_FILE:unit_test_runner>
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
     DEPENDS unit_test_runner)
-
-# Add the unit test coverage target.
-if(IS_CLANG AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-    string(REGEX REPLACE "clang(\\+\\+)?" llvm-profdata LLVM_PROFDATA ${CMAKE_CXX_COMPILER})
-    string(REGEX REPLACE "clang(\\+\\+)?" llvm-cov LLVM_COV ${CMAKE_CXX_COMPILER})
-    add_custom_target(
-        unit_test_coverage
-        COMMAND ${CMAKE_COMMAND} --build . --target unit_tests
-        COMMAND ${LLVM_PROFDATA} merge -sparse unit-testing/default.profraw
-                -o default.profdata
-        COMMAND ${LLVM_COV} show -instr-profile=default.profdata
-                $<TARGET_FILE:unit_test_runner>
-                >${PROJECT_SOURCE_DIR}/coverage.txt
-        WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-    add_test(
-        NAME unit_test_coverage
-        COMMAND ${CMAKE_COMMAND} --build . --target unit_test_coverage
-        WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
-else()
-    add_test(
-        NAME unit_tests
-        COMMAND ${CMAKE_COMMAND}
-            --build ${CMAKE_BINARY_DIR}
-            --target unit_tests)
-endif()
+add_test(
+    NAME unit_tests
+    COMMAND ${CMAKE_COMMAND}
+        --build ${CMAKE_BINARY_DIR}
+        --target unit_tests)
 
 # Add the inner test runner.
 file(GLOB_RECURSE test_srcs_inner CONFIGURE_DEPENDS "tests/inner/*.cpp")
-add_executable(inner_test_runner ${test_srcs_inner})
-# TODO only src/inner ?
+add_executable(inner_test_runner tests/runner.cpp ${test_srcs_inner})
 target_include_directories(inner_test_runner PRIVATE
-    src
-    tests)
+    src/inner)
 target_link_libraries(inner_test_runner cradle_inner)
-# Don't use precompiled headers for the test runner since it needs to include
-# Catch specially.
-set_source_files_properties(
-    tests/inner/runner.cpp
-    PROPERTIES
-        SKIP_PRECOMPILE_HEADERS ON)
 
 # Add the inner testing target.
 add_custom_target(
@@ -434,17 +406,11 @@ add_test(
 
 # Add the external test runner.
 file(GLOB_RECURSE test_srcs_external CONFIGURE_DEPENDS "tests/external/*.cpp")
-add_executable(external_test_runner ${test_srcs_external})
+add_executable(external_test_runner tests/runner.cpp ${test_srcs_external})
 target_include_directories(external_test_runner PRIVATE
     ${generated_include_dir}/src
     src)
 target_link_libraries(external_test_runner cradle_outer cradle_inner)
-# Don't use precompiled headers for the test runner since it needs to include
-# Catch specially.
-set_source_files_properties(
-    tests/external/runner.cpp
-    PROPERTIES
-        SKIP_PRECOMPILE_HEADERS ON)
 
 # Add the external testing target.
 add_custom_target(
@@ -457,10 +423,49 @@ add_test(
         --build ${CMAKE_BINARY_DIR}
         --target external_tests)
 
-# Target running all unit (=non-integration) tests
+# Add a runner covering all unit tests (including external and inner).
+file(GLOB_RECURSE test_srcs_all CONFIGURE_DEPENDS "tests/*/*.cpp")
+add_executable(all_unit_tests_runner tests/runner.cpp ${test_srcs_all})
+target_include_directories(all_unit_tests_runner PRIVATE
+    ${generated_include_dir}/src
+    src)
+target_link_libraries(all_unit_tests_runner cradle_outer cradle_inner)
+
+# Add a target running all unit tests (including external and inner).
 add_custom_target(
     all_unit_tests
-    DEPENDS inner_tests external_tests unit_tests)
+    # Create a fresh 'all-unit-testing' directory within the build dir and run the
+    # tests within that. (Some of them perform file I/O.)
+    COMMAND ${CMAKE_COMMAND} -E remove_directory all-unit-testing
+    COMMAND ${CMAKE_COMMAND} -E make_directory all-unit-testing
+    COMMAND ${CMAKE_COMMAND} -E chdir all-unit-testing ${CMAKE_COMMAND} -E env CRADLE_DEPLOY_DIR=${CMAKE_CURRENT_BINARY_DIR}/deploy CRADLE_THINKNODE_API_TOKEN=${API_TOKEN} CRADLE_THINKNODE_DOCKER_AUTH=${DOCKER_AUTH} $<TARGET_FILE:all_unit_tests_runner>
+    WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+    DEPENDS all_unit_tests_runner)
+add_test(
+    NAME all_unit_tests
+    COMMAND ${CMAKE_COMMAND}
+        --build ${CMAKE_BINARY_DIR}
+        --target all_unit_tests)
+
+# Add the unit test coverage target, covering all unit tests.
+if(IS_CLANG AND CMAKE_BUILD_TYPE STREQUAL "Debug")
+    string(REGEX REPLACE "clang(\\+\\+)?" llvm-profdata LLVM_PROFDATA ${CMAKE_CXX_COMPILER})
+    string(REGEX REPLACE "clang(\\+\\+)?" llvm-cov LLVM_COV ${CMAKE_CXX_COMPILER})
+    add_custom_target(
+        unit_test_coverage
+        COMMAND ${LLVM_PROFDATA} merge -sparse all-unit-testing/default.profraw
+                -o default.profdata
+        COMMAND ${LLVM_COV} show -instr-profile=default.profdata
+                $<TARGET_FILE:all_unit_tests_runner>
+                >${PROJECT_SOURCE_DIR}/coverage.txt
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+        DEPENDS all_unit_tests)
+    add_test(
+        NAME unit_test_coverage
+        COMMAND ${CMAKE_COMMAND}
+            --build ${CMAKE_BINARY_DIR}
+            --target unit_test_coverage)
+endif()
 
 # Add the integration testing target.
 add_custom_target(
