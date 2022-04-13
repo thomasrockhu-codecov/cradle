@@ -2,15 +2,15 @@
 
 #include <catch2/catch.hpp>
 
+#include "../support/regular.h"
 #include <cradle/inner/utilities/text.h>
-#include <inner/support/regular.h>
 
 using std::optional;
 using std::string;
 
 using namespace cradle;
 
-TEST_CASE("bool type interface", "[inner][types]")
+TEST_CASE("bool type interface (inner)", "[inner][types]")
 {
     test_inner_regular_value_pair(false, true);
 }
@@ -24,7 +24,7 @@ test_integer_interface()
     REQUIRE(deep_sizeof(Integer(0)) == sizeof(Integer));
 }
 
-TEST_CASE("integer type interfaces", "[inner][types]")
+TEST_CASE("integer type interfaces (inner)", "[inner][types]")
 {
     test_integer_interface<signed char>();
     test_integer_interface<unsigned char>();
@@ -47,20 +47,20 @@ test_float_interface()
     REQUIRE(deep_sizeof(Float(0)) == sizeof(Float));
 }
 
-TEST_CASE("floating point type interfaces", "[inner][types]")
+TEST_CASE("floating point type interfaces (inner)", "[inner][types]")
 {
     test_float_interface<float>();
     test_float_interface<double>();
 }
 
-TEST_CASE("string type interface", "[inner][types]")
+TEST_CASE("string type interface (inner)", "[inner][types]")
 {
     test_inner_regular_value_pair(string("hello"), string("world!"));
 
     REQUIRE(deep_sizeof(string("hello")) == deep_sizeof(string()) + 5);
 }
 
-TEST_CASE("blob type interface", "[inner][types]")
+TEST_CASE("blob type interface (inner)", "[inner][types]")
 {
     std::byte blob_data[] = {std::byte{0}, std::byte{1}};
 
@@ -73,7 +73,7 @@ TEST_CASE("blob type interface", "[inner][types]")
         make_static_blob(blob_data, 1), make_static_blob(blob_data + 1, 1));
 }
 
-TEST_CASE("optional type interface", "[inner][types]")
+TEST_CASE("optional type interface (inner)", "[inner][types]")
 {
     // Test an optional with a value.
     test_inner_regular_value_pair(
@@ -88,7 +88,7 @@ TEST_CASE("optional type interface", "[inner][types]")
     REQUIRE(deep_sizeof(optional<string>()) == sizeof(optional<string>));
 }
 
-TEST_CASE("vector type interface", "[inner][types]")
+TEST_CASE("vector type interface (inner)", "[inner][types]")
 {
     test_inner_regular_value_pair(
         std::vector<int>({0, 1}), std::vector<int>({1}));
@@ -98,7 +98,7 @@ TEST_CASE("vector type interface", "[inner][types]")
         == deep_sizeof(std::vector<int>()) + deep_sizeof(0) + deep_sizeof(1));
 }
 
-TEST_CASE("map type interface", "[inner][types]")
+TEST_CASE("map type interface (inner)", "[inner][types]")
 {
     test_inner_regular_value(std::map<int, int>({}));
 

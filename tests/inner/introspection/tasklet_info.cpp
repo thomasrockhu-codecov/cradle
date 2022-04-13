@@ -1,10 +1,10 @@
 #include <catch2/catch.hpp>
 
+#include "../introspection/tasklet_testing.h"
+#include "../support/core.h"
 #include <cradle/inner/introspection/tasklet.h>
 #include <cradle/inner/introspection/tasklet_impl.h>
 #include <cradle/inner/introspection/tasklet_info.h>
-#include <inner/introspection/tasklet_testing.h>
-#include <inner/support/core.h>
 
 using namespace cradle;
 
