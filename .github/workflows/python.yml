@@ -1,0 +1,23 @@
+name: Python
+
+on: [push, pull_request]
+
+jobs:
+
+  python:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Install
+      run: |
+        sudo pip3 install flake8 mypy pytest
+
+    - name: Test
+      run: |
+        cd python
+        flake8 scripts src tests
+        mypy scripts src tests
