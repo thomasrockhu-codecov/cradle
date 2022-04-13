@@ -63,8 +63,7 @@ class Session:
 
     def iss_diff(self, objA_id: str, objB_id: str) -> cmd.Object:
         """
-        Compute the diff between two objects.
-        Normally these would be in different realms?!
+        Compute the diff between two objects (in the same realm).
         """
         print('ISS DIFF', file=sys.stderr)
         command = cmd.IssDiffCommand(self.context_id, objA_id, objB_id)
@@ -72,8 +71,7 @@ class Session:
 
     def calculation_diff(self, calcA_id: str, calcB_id: str) -> cmd.Object:
         """
-        Compute the diff between two calculations.
-        Normally these would be in different realms?!
+        Compute the diff between two calculations (in the same realm).
         """
         print('CALCULATION DIFF', file=sys.stderr)
         command = cmd.CalculationDiffCommand(self.context_id, calcA_id, calcB_id)

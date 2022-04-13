@@ -5,7 +5,7 @@ def test_calculation_request(session):
         { 'calculation': { 'function': { 'account': 'mgh',
                                          'app': 'dosimetry',
                                          'args': ( { 'reference': '61e5377001001d0206ce037e602e97a5'},
-                                                   {'value': 0.02764318603944116}),
+                                                   { 'value': 0.02764318603944116}),
                                          'name': 'addition'}}
           }
 
